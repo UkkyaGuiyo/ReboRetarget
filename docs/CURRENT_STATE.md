@@ -4,17 +4,17 @@ Last updated: 2026-09-05
 
 ## Current checkpoint
 
-Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. It has no external I/O and the combined suite passes 83 tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
+Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. Phase 2E offline preparation now includes the accepted safety protocol and a pure capacity-one latest-pose state primitive. The combined suite passes 103 tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
 
 ## Actual implementation state
 
-**No live or user-facing ReboRetarget application exists.** The repository contains a small pure/offline FK core, a separate ReboCap-delta value adapter, an eight-role semantic tracker-anchor builder, a network-free VRChat OSC representation/codec layer, confirmed hierarchy metadata, in-memory synthetic fixtures/tests, documentation, and the isolated research-only aggregate Pose Inspector. None is connected to ReboCap, VRChat, SteamVR, Virtual Desktop, Quest, or a GUI; the OSC codec only transforms values to and from bytes in memory.
+**No live or user-facing ReboRetarget application exists.** The repository contains a small pure/offline FK core, a separate ReboCap-delta value adapter, an eight-role semantic tracker-anchor builder, a capacity-one latest-pose state primitive, a network-free VRChat OSC representation/codec layer, confirmed hierarchy metadata, in-memory synthetic fixtures/tests, documentation, and the isolated research-only aggregate Pose Inspector. None is connected to ReboCap, VRChat, SteamVR, Virtual Desktop, Quest, or a GUI; the OSC codec only transforms values to and from bytes in memory.
 
 Not implemented:
 
-- Product ReboCap SDK/API connection or live skeleton ingestion. The pure adapter accepts already-constructed values only; a non-product research inspector exists under `research/` but is not used by the FK core.
+- Product ReboCap SDK/API connection or live skeleton ingestion. The pure adapter and latest-pose state accept already-constructed values only; a non-product research inspector exists under `research/` but is not used by the FK core.
 - IK, foot locking/contact, smoothing, confidence weighting, or a production retargeting pipeline. Only pure rotation-delta transfer and FK exist.
-- UDP transport, OSC transmission, timing/scheduling, or actual tracker output. Offline slot mapping, Euler conversion, and minimal packet encoding/decoding are implemented.
+- UDP transport, OSC transmission, timing/scheduling, or actual tracker output. Offline slot mapping, Euler conversion, minimal packet encoding/decoding, and caller-timestamped latest-pose state are implemented.
 - GUI, ReboCap-attached window, profiles, or persistence code.
 - ReboCap watcher, automatic startup/shutdown, crash recovery, or setting restoration.
 - SteamVR output control or UI automation.
@@ -59,6 +59,9 @@ Not implemented:
 - One Phase 2C synthetic pipeline produces eight slot poses and sixteen unique position/rotation messages, all decoded in memory. No socket or network sender exists.
 - Head position/rotation values use separate fixed addresses and never enter the eight body slots. A separate yaw-plus-translation rigid transform applies uniformly to all eight trackers and preserves pairwise distance and relative rotation; no recenter is implemented.
 - Phase 2D adds 22 tests to the prior 61 for 83 passing standard-library tests on Python 3.10, 3.11, and 3.13.
+- `reboretarget/latest_pose.py` adds a generic capacity-one slot with immutable snapshots, strict receive/source timestamp watermarks, overwrite-only sequence numbers, explicit stale/disconnected states, and rearm without watermark reset. Twenty deterministic tests bring the total to 103 on Python 3.10, 3.11, and 3.13.
+- The slot uses one `threading.Lock` to make multi-field callback/consumer transitions atomic but starts and owns no thread. It has no SDK type, payload validation, system-clock read, timer, scheduler, queue, reconnect, I/O, persistence, logging, or metrics subsystem.
+- Tests use 0.250 seconds as a provisional Phase 2E stale candidate because Phase 1.5 observed a maximum receive gap of 130.4663 ms and zero gaps at least 250 ms. This is not a universal product default and remains subject to controlled live validation.
 
 ## Verified repository facts
 
@@ -70,15 +73,13 @@ Not implemented:
 
 ## Go / No-Go
 
-- **GO (offline only):** implement and test a pure capacity-one latest-pose state primitive with overwrite-on-newer, stale/disconnect invalidation, and no SDK, clock, thread, scheduler, process, or network dependency.
+- **COMPLETE (offline only):** the pure capacity-one latest-pose primitive covers overwrite-on-newer, ordering watermarks, stale/disconnect invalidation, and rearm. Its `threading.Lock` provides atomic access but owns no thread, scheduler, process, or network dependency.
 - **WAITING_FOR_USER:** the Phase 2E live adapter value-path validation is not authorized. It may run only at the natural Safe Point and with explicit authorization defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`.
 - **NO-GO:** creating the Safe Point by starting, stopping, or restarting applications; multi-client testing without separate approval; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
 
 ## Single recommended next task
 
-Implement the smallest pure/offline capacity-one latest-pose state primitive. It should accept validated pose values plus explicit timestamps, replace older state only with a newer pose, invalidate on an explicit stale/disconnect event, and expose the latest valid value without adding an SDK client, clock, thread, queue, scheduler, reconnect loop, process detector, or network path. Prove overwrite, out-of-order rejection, invalidation, and no-backlog behavior with deterministic tests.
-
-The separate Phase 2E live adapter value-path validation remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. Its natural Safe Point and explicit authorization gate are defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`; Codex must not create that state by starting, stopping, or restarting any application.
+Stop autonomous live work at this gate. The separate Phase 2E live adapter value-path validation remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. Its natural Safe Point and explicit authorization gate are defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`; Codex must not create that state by starting, stopping, or restarting any application. When and only when the user explicitly authorizes one bounded run at an already-present Safe Point, perform the protocol's read-only preflight before opening one official SDK client.
 
 ## Blockers and unverified items
 
@@ -86,7 +87,7 @@ The separate Phase 2E live adapter value-path validation remains **NOT AUTHORIZE
 - The exact safe query/set/restore control surface for ReboCap's native SteamVR body output is unknown.
 - Quaternion validity, joint count, Pelvis translation, timestamp unit, and cadence were live-observed. Parent hierarchy is now confirmed from official code, while axis signs against known actions, safe multi-client support, and the physical shoulder-tracker effect versus a no-shoulder A/B remain unverified.
 - VRChat crashed during the live observation. The crash signature is known, and no kill command was issued, but causality involving the additional SDK client remains unresolved.
-- Receive gaps/bursts and six backlog candidates require latest-Pose semantics. Their exact SDK-versus-client scheduling origin remains unresolved.
+- Receive gaps/bursts and six backlog candidates justify the now-implemented offline latest-Pose semantics. Their exact SDK-versus-client scheduling origin and live integration remain unresolved.
 - External disconnect/reconnect and stale-frame recovery were not exercised; the recorded disconnect was Inspector shutdown.
 - VRChat OSC behavior has been verified from current official documentation, but not yet on the user's actual VRChat avatar/environment.
 - Current release notes add a single-pulse head-position snap, while the main tracker page does not specify head-position streaming thresholds. Do not apply the documented head-rotation 300 ms/10-second rules to head position by inference.
@@ -108,5 +109,6 @@ The separate Phase 2E live adapter value-path validation remains **NOT AUTHORIZE
 - Phase 2B commit `54c6dc7` is published on `origin/main`.
 - Phase 2C commit `07d525b` is published on `origin/main`.
 - Phase 2D commit `616edfb` was independently test-audited, received Scope Guard `ACCEPT`, and is published on `origin/main`.
-- The Phase 2E offline safety-protocol documentation gate is complete in the working tree but remains pending review and commit at this handoff. No live validation was run.
+- Phase 2E safety-protocol commit `5a3984a` received Scope Guard and legal/provenance acceptance and is published on `origin/main`.
+- The pure/offline latest-pose primitive and its tests are implemented in the current repository state. No live validation was run.
 - Deployment: none.

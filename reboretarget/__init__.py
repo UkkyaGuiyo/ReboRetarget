@@ -33,6 +33,13 @@ from .rebocap_adapter import (
     adapt_rebocap_delta_pose,
     source_bind_global_rotations,
 )
+from .latest_pose import (
+    LatestPoseSample,
+    LatestPoseSlot,
+    LatestPoseSnapshot,
+    LatestPoseState,
+    PublishResult,
+)
 from .tracker_anchors import (
     SEMANTIC_TRACKER_ROLES,
     SemanticTrackerRole,
@@ -96,6 +103,11 @@ __all__ = [
     "ReboCapDeltaPose",
     "adapt_rebocap_delta_pose",
     "source_bind_global_rotations",
+    "LatestPoseSample",
+    "LatestPoseSlot",
+    "LatestPoseSnapshot",
+    "LatestPoseState",
+    "PublishResult",
     "SEMANTIC_TRACKER_ROLES",
     "SemanticTrackerRole",
     "TrackerAnchorDefinition",

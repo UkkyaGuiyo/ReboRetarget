@@ -67,6 +67,8 @@ Collar, Shoulder, Elbow, Wrist, and Hand rotations are always represented in the
 - Record receive time separately from the source timestamp until timestamp semantics are verified.
 - Never trigger ReboCap calibration or change ReboCap settings automatically.
 
+`LatestPoseSlot` now implements the state portion of this contract offline. It accepts already-validated generic values and caller-supplied timestamps, stores at most one sample, requires both receive and source timestamps to advance strictly, and clears its value on stale/disconnect while preserving ordering watermarks. Payload is opaque and is neither validated nor copied: `None` may be a valid value, while Pose callers must provide an already-validated immutable value and not mutate it after publication. It uses one `threading.Lock` for atomic multi-field access but creates no thread and reads no clock. The 0.250-second threshold used in tests is a provisional Phase 2E candidate based on the observed 130.4663 ms maximum receive gap and zero gaps at least 250 ms; it is not a product default.
+
 ### Still unverified live
 
 - Known-action axis signs and connection of the offline T-pose-delta adapter to live SDK values.
@@ -168,7 +170,7 @@ Virtual Desktop remains the HMD/controller transport into SteamVR. Its optional 
 
 The Phase 2D offline gate is implemented: eight semantic Quaternion transforms become eight deterministic VRChat representation values and sixteen OSC `,fff` messages, then decode successfully in memory. Rotation-equivalent round trips cover the required axes, compounds, singularities, angle boundaries, and `q/-q`. Head alignment is a separate value model; yaw-plus-translation tracking-space alignment preserves body morphology.
 
-The next implementation task is a pure/offline capacity-one latest-pose state primitive; it must not add an SDK client, scheduler, process access, or network path. The separate **Live ReboCap Adapter Safety Validation** is `NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER`. Its natural Safe Point, single-client-first boundary, aborts, and acceptance evidence are defined in [`LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`](LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md). Multi-client testing requires separate opt-in approval. Actual UDP/OSC transmission, VRChat startup, or interaction with SteamVR/Virtual Desktop/Quest remain later gates. Any future output result must be verified in VRChat, not merely by packet construction or upstream registration.
+The pure/offline capacity-one latest-pose state primitive is implemented without an SDK client, owned thread, scheduler, process access, or network path. The separate **Live ReboCap Adapter Safety Validation** is `NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER`. Its natural Safe Point, single-client-first boundary, aborts, and acceptance evidence are defined in [`LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`](LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md). Multi-client testing requires separate opt-in approval. Actual UDP/OSC transmission, VRChat startup, or interaction with SteamVR/Virtual Desktop/Quest remain later gates. Any future output result must be verified in VRChat, not merely by packet construction or upstream registration.
 
 ## 6. Sources
 
