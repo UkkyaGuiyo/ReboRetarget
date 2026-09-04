@@ -4,11 +4,11 @@ Last updated: 2026-09-04
 
 ## Current checkpoint
 
-Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A pure/offline Target Skeleton FK PoC are complete. The FK core accepts synthetic pelvis translation plus ordered global rotations, transfers source local-motion deltas onto a target rest skeleton, and reconstructs target world transforms using target bone lengths. It has no external I/O and passed 30 numeric tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
+Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B pure-offline gates are complete. Phase 2B confirms all 24 ReboCap parent relations from matching official Unity SDK v4 and Unreal Engine plugin v2 arrays and replays short synthetic leg, root, Quaternion-boundary, and upper-body Pose sequences through the Phase 2A FK core. It has no external I/O and the combined suite passes 44 numeric tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
 
 ## Actual implementation state
 
-**No live or user-facing ReboRetarget application exists.** The repository now contains one small reusable pure/offline mathematics module, synthetic fixtures/tests, documentation, and the isolated research-only aggregate Pose Inspector. The mathematics module is not connected to ReboCap, VRChat, SteamVR, Virtual Desktop, Quest, OSC, or a GUI.
+**No live or user-facing ReboRetarget application exists.** The repository now contains one small reusable pure/offline mathematics module, confirmed hierarchy metadata, in-memory synthetic sequence fixtures/tests, documentation, and the isolated research-only aggregate Pose Inspector. The mathematics module is not connected to ReboCap, VRChat, SteamVR, Virtual Desktop, Quest, OSC, or a GUI.
 
 Not implemented:
 
@@ -39,10 +39,15 @@ Not implemented:
 - `reboretarget/fk.py` now defines immutable Quaternion, Skeleton, Pose, Transform, and joint-diagnostic values plus pure global-to-local, target FK, retarget, and leg-control functions. It uses Python 3.10 standard-library mathematics only.
 - Source-to-target transfer uses Hamilton `(w,x,y,z)` active rotations: `local = inverse(parent_global) * child_global`; `motion_delta = inverse(source_rest_local) * source_local`; `target_local = target_rest_local * motion_delta`.
 - FK places each child at `parent_position + rotate(parent_global, target_rest_local_position)`. Source segment lengths and source joint positions are not copied.
-- Thirty synthetic `unittest` cases passed on Python 3.10, 3.11, and 3.13. They cover the confirmed 24-name order, the fixture's explicitly provisional conventional hierarchy, strict 24-item input validation, Hamilton multiplication order, `q/-q` equivalence through the retarget path, identity and compound global-to-local recovery, non-identity rest rotations, T-pose/straight legs, 90-degree knee, 30-degree hip plus 45-degree knee, long/short target legs, source-length independence, left/right symmetry, parent-position propagation, Spine/Shoulder/Elbow propagation, numeric local-rotation diagnostics, determinism, validation, and Leg Length/Balance semantics.
+- The original thirty Phase 2A synthetic `unittest` cases remain passing on Python 3.10, 3.11, and 3.13. They cover the confirmed 24-name order, strict 24-item input validation, Hamilton multiplication order, `q/-q` equivalence through the retarget path, identity and compound global-to-local recovery, non-identity rest rotations, T-pose/straight legs, 90-degree knee, 30-degree hip plus 45-degree knee, long/short target legs, source-length independence, left/right symmetry, parent-position propagation, Spine/Shoulder/Elbow propagation, numeric local-rotation diagnostics, determinism, validation, and Leg Length/Balance semantics.
 - Straight source legs remained straight on 1.02 m and 0.70 m target legs; no IK or source-foot-position constraint was applied. A 0.52 m thigh plus 0.50 m calf with a 90-degree knee produced the expected knee `(−0.1, 0.48, 0)` and ankle `(−0.1, 0.48, −0.50)` in the synthetic fixture.
 - Parent-inheritance diagnostics expose only the source local rotation and its numeric magnitude. The core deliberately has no inheritance classification Boolean or threshold, because a live near-zero value alone cannot distinguish anatomical zero motion from unavailable independent SDK data.
 - `Leg Length` scales total upper-plus-lower leg length exactly. `Thigh / Calf Balance` transfers a share of that fixed total between the two segments.
+- The official normalized parent-index array is `(-1,0,0,0,1,2,3,4,5,6,7,8,9,9,9,12,13,14,16,17,18,19,20,21)`. All 24 relations are marked `CONFIRMED` from matching Unity SDK v4 and Unreal Engine plugin v2 code, with public source references and archive hashes retained as metadata.
+- A seven-frame straight-to-bend sequence preserved analytic Knee/Ankle positions and 5-degree Hip plus 10-degree Knee frame steps. Long 1.02 m and short 0.70 m targets kept identical local joint rotations while using their own segment lengths.
+- Four synthetic root frames propagated lateral, vertical, and forward/back translation exactly to every joint. A four-frame sign/boundary case produced shortest rotation steps `0, 2, 0` degrees across `q/-q` and `179 -> 181`.
+- A five-frame Spine3/Collar/Shoulder/Elbow sequence used the same FK core. A fixture-only `Shoulder Width = 1.10` changed the shoulder span from 0.40 m to 0.44 m without changing the 0.28 m upper-arm or 0.25 m forearm fixture lengths. Product Arm Length remains deferred.
+- The official SDK describes rotations as relative to T-pose, and official Unity/Unreal integration code composes them with bind/T-pose global rotations. No live adapter implementing that semantic boundary exists yet.
 
 ## Verified repository facts
 
@@ -54,12 +59,12 @@ Not implemented:
 
 ## Go / No-Go
 
-- **GO:** the next minimal offline gate: replay a short hand-authored or lawfully sanitized ReboCap-shaped pose sequence through the proven pure FK core and inspect deterministic target snapshots.
+- **GO:** the next minimal offline gate: derive the planned Hip, Chest, Knee, Foot, and Upper Arm tracker transforms from synthetic Target Skeleton world transforms without sending them.
 - **NO-GO:** live SDK reconnection, OSC output, Two Bone IK, production retargeting, Watcher integration, chest-yaw correction, and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
 
 ## Single recommended next task
 
-Create the smallest entirely offline, short sequence of hand-authored or lawfully sanitized ReboCap-shaped poses and replay it through the Phase 2A core. Verify deterministic target snapshots and continuity for a few named motions without live SDK access, OSC, IK, VR applications, or personal raw motion.
+Create the smallest pure/offline Target-Skeleton-to-tracker transform PoC for the planned eight semantic points. Use only synthetic Target poses, make offsets/orientations explicit, and verify deterministic transforms and left/right symmetry. Do not add OSC transport, a live ReboCap adapter, IK, VR application access, or personal raw motion.
 
 Use the priority order in D-011. If a live VR session is active, use quiet/read-only inspection and do not foreground, restart, stop, reset, or change ReboCap/SteamVR/VRChat/Virtual Desktop/Quest state without explicit authorization.
 
@@ -67,16 +72,16 @@ Use the priority order in D-011. If a live VR session is active, use quiet/read-
 
 - ReboCap SDK redistribution permission is unconfirmed.
 - The exact safe query/set/restore control surface for ReboCap's native SteamVR body output is unknown.
-- Quaternion validity, joint count, Pelvis translation, timestamp unit, and cadence were live-observed. Axis signs against known actions, hierarchy/local rotations, safe multi-client support, and the physical shoulder-tracker effect versus a no-shoulder A/B remain unverified.
+- Quaternion validity, joint count, Pelvis translation, timestamp unit, and cadence were live-observed. Parent hierarchy is now confirmed from official code, while axis signs against known actions, safe multi-client support, and the physical shoulder-tracker effect versus a no-shoulder A/B remain unverified.
 - VRChat crashed during the live observation. The crash signature is known, and no kill command was issued, but causality involving the additional SDK client remains unresolved.
 - Receive gaps/bursts and six backlog candidates require latest-Pose semantics. Their exact SDK-versus-client scheduling origin remains unresolved.
 - External disconnect/reconnect and stale-frame recovery were not exercised; the recorded disconnect was Inspector shutdown.
 - VRChat OSC behavior has been verified from current official documentation, but not yet on the user's actual VRChat avatar/environment.
 - Duplicate-role precedence between native SteamVR and OSC sources is not documented sufficiently to rely on.
 - Python 3.10 plus the standard library is proven for the Phase 2A math PoC; the product technology stack and MVP/v1 boundary are not selected.
-- The synthetic 24-joint hierarchy works numerically but remains a proposed semantic hierarchy until separately checked against authoritative/live known-action evidence.
+- The official hierarchy is confirmed, but the SDK's T-pose-relative global rotations still require an explicit adapter before the offline core can consume live values correctly.
 - Upper-body joints fit the generic FK structure, but duplicate live statistics do not yet say which Shoulder/Elbow/Wrist/Hand or Ankle/Foot nodes have independent trustworthy rotation versus inherited/helper behavior.
-- Actual avatar rest skeleton extraction, coordinate alignment, recorded/sanitized pose-sequence format, and the remaining Hip/Arm/Shoulder morphology-control meanings are not implemented.
+- Actual avatar rest skeleton extraction, coordinate alignment, tracker-transform offsets, and the remaining Hip/Arm morphology-control meanings are not implemented. Shoulder Width exists only as a synthetic fixture parameter.
 - Crash-safe restoration behavior has not been designed or tested.
 - The Quest chest-yaw signal source, quality, drift model, and usefulness are unverified.
 
@@ -86,5 +91,6 @@ Use the priority order in D-011. If a live VR session is active, use quiet/read-
 - Phase 0 baseline: `bc01e74` (`docs: establish ReboRetarget project memory`).
 - Remote/GitHub publication: public `origin/main` at <https://github.com/UkkyaGuiyo/ReboRetarget>.
 - Phase 1.5 research commit: `35b3308`.
-- Phase 2A source, synthetic tests, and documentation are pending the current commit at this handoff.
+- Phase 2A commit `1731c9d` is published on `origin/main`.
+- Phase 2B source, synthetic tests, and documentation are pending a separate review/commit at this handoff.
 - Deployment: none.

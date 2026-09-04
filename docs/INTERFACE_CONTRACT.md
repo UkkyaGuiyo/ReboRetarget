@@ -1,6 +1,6 @@
 # Interface Contract
 
-Status: **Phase 1 pre-implementation contract**
+Status: **Phase 2B offline interface contract**
 Last updated: 2026-09-04
 
 This document defines the narrow external boundary for the first ReboRetarget proof of concept. It records confirmed behavior separately from requirements and unresolved items. It is not an implementation claim.
@@ -50,7 +50,9 @@ The confirmed 24-joint SMPL-style order is:
 23. L_Hand
 24. R_Hand
 
-The conventional hierarchy used by existing ReboCap integrations is pelvis-rooted legs, `Pelvis -> Spine1 -> Spine2 -> Spine3 -> Neck -> Head`, and `Spine3 -> Collar -> Shoulder -> Elbow -> Wrist -> Hand` on each side. The official SDK page identifies SMPL ordering and parent-relative local rotations but does not expose a normative parent array. The PoC must assert the hierarchy against known T-pose motion before solver work treats it as final.
+The hierarchy is confirmed from two official code distributions: ReboCap Unity SDK v4 and ReboCap Unreal Engine plugin source v2. Both encode pelvis-rooted legs, `Pelvis -> Spine1 -> Spine2 -> Spine3 -> Neck -> Head`, and `Spine3 -> Collar -> Shoulder -> Elbow -> Wrist -> Hand` on each side. Unity uses `-1` for the root parent, while Unreal uses self index `0`; ReboRetarget normalizes the Pelvis parent to `None`. The complete normalized parent-index array is `(-1,0,0,0,1,2,3,4,5,6,7,8,9,9,9,12,13,14,16,17,18,19,20,21)`.
+
+The SDK documentation states that all output rotations are relative to T-pose. Official Unity and Unreal integration code composes each received ReboCap Quaternion with a bind/T-pose global rotation. Therefore the SDK's global values must not be treated as already-composed absolute bind rotations. The offline core can represent the required values, but a production/live T-pose-delta adapter is not implemented.
 
 ### Shoulder tracker boundary
 
@@ -67,8 +69,7 @@ Collar, Shoulder, Elbow, Wrist, and Hand rotations are always represented in the
 
 ### Still unverified live
 
-- A callback sample from the currently installed build.
-- Exact timestamp unit/epoch and observed jitter/rate.
+- Known-action axis signs and the live T-pose-delta adapter.
 - Multiple simultaneous external SDK clients. The GUI must be running because it provides the broadcast, but multi-client support is not explicitly documented.
 - The observable difference between physical shoulder trackers present and absent.
 
@@ -157,19 +158,15 @@ Virtual Desktop remains the HMD/controller transport into SteamVR. Its optional 
 
 ## 5. Acceptance Surface for the Next PoC
 
-The next PoC is complete only when a user-authorized session demonstrates all of the following without changing protected settings:
+The next PoC remains entirely offline. It is complete when deterministic Target Skeleton world transforms are converted into the planned Hip, Chest, both Knee, both Foot, and both Upper Arm tracker transforms using synthetic fixtures only. It must define offsets and orientations explicitly, preserve left/right symmetry, and add no network, OSC sender, live SDK adapter, IK, GUI, watcher, or SteamVR control.
 
-1. The official SDK connects to the running ReboCap GUI after the user's existing calibration.
-2. Live callbacks expose the documented joint count/order and plausible pelvis translation/rotations at measured cadence.
-3. Known body motions verify axes, quaternion order, hierarchy, timestamp behavior, and shoulder-data behavior.
-4. Disconnect/reconnect invalidates stale data and does not replay backlog.
-5. No production OSC sender, retarget solver, GUI, watcher, startup integration, or automatic SteamVR-output controller has been introduced.
-
-The subsequent OSC packet PoC is a separate gate and must be verified in VRChat, not merely by packet capture.
+Actual OSC transmission and live SDK reconnection remain separate later gates. Any future live result must be verified in VRChat, not merely by packet construction or upstream registration.
 
 ## 6. Sources
 
 - ReboCap SDK interface: <https://doc.rebocap.com/en_US/SDK/>
+- ReboCap Unity SDK v4: `Assets/RebocapSdk/DemoScenes/SdkManager.cs:39-64,385-389,432-433` and `Assets/RebocapSdk/RebocapWsSdk.cs:74-99`; official archive SHA-256 `E0C0C102D8C45529DF731341E12C2B52BD45823269F43DAD753DBBE9132FE0BF`.
+- ReboCap Unreal Engine plugin v2: `Source/rebocap_runtime/Private/rebocap_source.cpp:115-152` and `rebocap_pose_node.cpp:282-308`; official archive SHA-256 `AAFA2393FBE81E0F24A513BCB9546FC96147D2893AA7B1C7C33DA1CB110EAA53`.
 - ReboCap connection and PC/VR controls: <https://doc.rebocap.com/en_US/ui_help_doc/control/connect.html>
 - ReboCap WebSocket configuration: <https://doc.rebocap.com/en_US/ui_help_doc/control/config.html>
 - ReboCap SteamVR integration: <https://doc.rebocap.com/en_US/third_party_software_access/steamvr/>

@@ -55,6 +55,87 @@ REBOCAP_24_JOINT_NAMES: Tuple[str, ...] = (
     "R_Hand",
 )
 
+# Official ReboCap Unity SDK v4 and Unreal Engine plugin v2 encode the same
+# parent relations.  The Unity root sentinel (-1) is normalized to None; the
+# Unreal implementation represents the Pelvis root as self index 0.
+REBOCAP_24_PARENT_INDICES: Tuple[int, ...] = (
+    -1, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
+    9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21,
+)
+REBOCAP_24_PARENT_NAMES: Tuple[Optional[str], ...] = tuple(
+    None if parent_index < 0 else REBOCAP_24_JOINT_NAMES[parent_index]
+    for parent_index in REBOCAP_24_PARENT_INDICES
+)
+
+
+@dataclass(frozen=True, slots=True)
+class HierarchySourceReference:
+    """Public reference for the confirmed ReboCap parent array."""
+
+    reference_id: str
+    description: str
+    location: str
+    url: str
+    sha256: Optional[str]
+
+
+REBOCAP_HIERARCHY_SOURCE_REFERENCES: Tuple[HierarchySourceReference, ...] = (
+    HierarchySourceReference(
+        "REBOCAP_SDK_DOCS",
+        "ReboCap official SDK documentation (SDK interface and 24 bone names)",
+        "SDK Interface Description and 24 Bone Names; accessed 2026-09-04",
+        "https://doc.rebocap.com/en_US/SDK/",
+        None,
+    ),
+    HierarchySourceReference(
+        "REBOCAP_UNITY_V4",
+        "ReboCap official Unity SDK v4",
+        "Assets/RebocapSdk/DemoScenes/SdkManager.cs:39-64 and "
+        "Assets/RebocapSdk/RebocapWsSdk.cs:74-99",
+        "https://doc.rebocap.com/img/files/rebocap_unity_sdk_v4.unitypackage",
+        "E0C0C102D8C45529DF731341E12C2B52BD45823269F43DAD753DBBE9132FE0BF",
+    ),
+    HierarchySourceReference(
+        "REBOCAP_UE_V2",
+        "ReboCap official Unreal Engine plugin source v2",
+        "Source/rebocap_runtime/Private/rebocap_source.cpp:115-152",
+        "https://doc.rebocap.com/img/ue_plugin/rebocap_unreal_engine_plugin_v2.zip",
+        "AAFA2393FBE81E0F24A513BCB9546FC96147D2893AA7B1C7C33DA1CB110EAA53",
+    ),
+)
+
+
+@dataclass(frozen=True, slots=True)
+class JointHierarchyEvidence:
+    """Evidence classification for one normalized parent relation."""
+
+    joint: str
+    parent_index: int
+    parent: Optional[str]
+    status: str
+    source_reference_ids: Tuple[str, ...]
+
+
+REBOCAP_24_HIERARCHY_EVIDENCE: Tuple[JointHierarchyEvidence, ...] = tuple(
+    JointHierarchyEvidence(
+        joint,
+        parent_index,
+        parent,
+        "CONFIRMED",
+        (
+            ("REBOCAP_SDK_DOCS", "REBOCAP_UNITY_V4", "REBOCAP_UE_V2")
+            if parent_index < 0
+            else ("REBOCAP_UNITY_V4", "REBOCAP_UE_V2")
+        ),
+    )
+    for joint, parent_index, parent in zip(
+        REBOCAP_24_JOINT_NAMES,
+        REBOCAP_24_PARENT_INDICES,
+        REBOCAP_24_PARENT_NAMES,
+    )
+)
+
+
 def _finite_float(value: float, label: str) -> float:
     converted = float(value)
     if not math.isfinite(converted):
@@ -286,15 +367,26 @@ class SkeletonDefinition:
 
 
 def validate_rebocap24_skeleton(skeleton: SkeletonDefinition) -> None:
-    """Validate only the confirmed ReboCap 24-joint name/order contract."""
+    """Validate the confirmed ReboCap 24-joint order and parent hierarchy."""
 
     if skeleton.joint_names != REBOCAP_24_JOINT_NAMES:
         raise ValueError("skeleton joint order does not match ReboCap's 24-joint order")
+    actual_parents = tuple(joint.parent for joint in skeleton.joints)
+    if actual_parents != REBOCAP_24_PARENT_NAMES:
+        raise ValueError(
+            "skeleton parent hierarchy does not match ReboCap's 24-joint hierarchy"
+        )
 
 
 @dataclass(frozen=True, slots=True)
 class SourcePose:
-    """Pelvis translation plus global joint rotations."""
+    """Pelvis translation plus core-internal global joint rotations.
+
+    The official SDK's global values are rotations relative to its T-pose,
+    not fully composed target-world bind rotations. ``from_rebocap24`` only
+    validates the ordered value container; a live semantic adapter is not yet
+    implemented and must make that T-pose-delta boundary explicit.
+    """
 
     root_translation: Vector3
     global_rotations: Tuple[Quaternion, ...]
@@ -319,7 +411,10 @@ class SourcePose:
         root_translation: Sequence[float],
         global_rotations_wxyz: Sequence[QuaternionLike],
     ) -> "SourcePose":
-        """Convert the confirmed ordered 24-Quaternion format to a pose."""
+        """Validate and contain the confirmed ordered 24-Quaternion shape.
+
+        This does not implement the live ReboCap T-pose-delta adapter.
+        """
 
         if len(global_rotations_wxyz) != len(REBOCAP_24_JOINT_NAMES):
             raise ValueError("ReboCap pose must contain exactly 24 global rotations")
@@ -502,6 +597,19 @@ def retarget_pose(
         target_local_tuple,
         world,
         tuple(diagnostics),
+    )
+
+
+def retarget_sequence(
+    source_poses: Sequence[SourcePose],
+    source_skeleton: SkeletonDefinition,
+    target_skeleton: SkeletonDefinition,
+) -> Tuple[TargetPose, ...]:
+    """Retarget an in-memory sequence without timing, I/O, or interpolation."""
+
+    return tuple(
+        retarget_pose(source_pose, source_skeleton, target_skeleton)
+        for source_pose in source_poses
     )
 
 

@@ -139,7 +139,7 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Decision: For the offline FK core, recover each source local rotation as `inverse(parent_global) * child_global`, remove the source rest-local rotation, apply the resulting motion delta after the target rest-local rotation, and run FK using only target rest-local vectors.
 - Convention: Hamilton `(w,x,y,z)` active rotations; `left * right` applies `right` first and then `left`. Quaternion sign is not identity: `q` and `-q` are treated as the same rotation.
 - Why: This preserves joint posture while allowing source and target bone lengths and rest rotations to differ. It also keeps a straight source knee straight instead of solving the target foot back to the source position.
-- Boundary: Phase 2A proves this with synthetic coordinates only. Installed ReboCap axis signs and the proposed 24-joint hierarchy still require a separately authorized evidence gate before live use.
+- Boundary: Phase 2A proves this with synthetic coordinates only. Phase 2B confirms the 24-joint parent array from the official Unity SDK v4 and Unreal Engine plugin v2. The SDK's global rotations are T-pose-relative deltas, so a future adapter must explicitly compose that convention; installed ReboCap axis signs still require a separately authorized evidence gate before live use.
 
 ### D-022 — Give leg controls total-length and fixed-total balance semantics
 

@@ -6,6 +6,7 @@ import math
 import unittest
 
 from reboretarget import (
+    REBOCAP_24_PARENT_NAMES,
     REBOCAP_24_JOINT_NAMES,
     JointDefinition,
     Quaternion,
@@ -22,7 +23,6 @@ from reboretarget import (
     validate_rebocap24_skeleton,
 )
 from tests.synthetic_fixtures import (
-    SYNTHETIC_CONVENTIONAL_PARENT_NAMES,
     pose_from_local_rotations,
     synthetic_human_skeleton,
 )
@@ -48,12 +48,12 @@ class NumericAssertions(unittest.TestCase):
 
 
 class SkeletonAndInputContractTests(NumericAssertions):
-    def test_confirmed_24_order_and_fixture_only_provisional_hierarchy(self):
+    def test_confirmed_24_order_and_parent_hierarchy(self):
         skeleton = synthetic_human_skeleton()
         self.assertEqual(skeleton.joint_names, REBOCAP_24_JOINT_NAMES)
         self.assertEqual(
             tuple(joint.parent for joint in skeleton.joints),
-            SYNTHETIC_CONVENTIONAL_PARENT_NAMES,
+            REBOCAP_24_PARENT_NAMES,
         )
         validate_rebocap24_skeleton(skeleton)
 

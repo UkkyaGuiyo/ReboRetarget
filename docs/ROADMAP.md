@@ -39,14 +39,15 @@ Result: exit achieved for static/read-only discovery in `INTERFACE_CONTRACT.md`.
 
 ## Phase 2 — Minimal retargeting specification and test data
 
-Status: **in progress; limited live observation and Phase 2A offline FK are complete**
+Status: **in progress; limited live observation plus Phase 2A and Phase 2B offline gates are complete**
 
 - A limited official-SDK Pose observation measured the 24-joint stream and cadence without retaining raw motion. It ended after a concurrent VRChat crash, so multi-client safety, known-action axes, reconnect, and shoulder-present/absent behavior remain unverified and live reconnection is not assumed safe.
 - Phase 2A implemented pure/offline global-to-local conversion, motion-delta transfer, and target-skeleton FK. Thirty synthetic numeric tests prove straight, bent, compound, long/short, source-length-independent, mirrored, upper-body propagation, inheritance, non-identity-rest, and leg-control cases without any live-system access.
+- Phase 2B confirmed all 24 parent relations from matching official Unity SDK v4 and Unreal Engine plugin v2 arrays, then replayed short hand-authored leg, root, Quaternion-boundary, and upper-body sequences through the same core. No recording format, interpolation layer, or external dependency was added.
 
 - Leg Length and Thigh/Calf Balance now have explicit initial mathematical semantics. The other four morphology controls remain to be specified from controlled cases.
 - Capture or construct the smallest lawful, non-personal pose samples needed to check straight legs, crouch, crossing, kick, weight shift, outstretched arms, and folded arms.
-- Validate a short hand-authored or sanitized ReboCap-shaped offline pose sequence before returning to any live input.
+- Convert synthetic Target Skeleton world transforms into the planned VRChat tracker semantics entirely offline before returning to any live input or sending OSC.
 
 Exit: solver inputs, outputs, invariants, and pose acceptance cases are explicit enough to implement without speculative infrastructure.
 

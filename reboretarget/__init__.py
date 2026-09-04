@@ -2,8 +2,14 @@
 
 from .fk import (
     REBOCAP_24_JOINT_NAMES,
+    REBOCAP_24_HIERARCHY_EVIDENCE,
+    REBOCAP_24_PARENT_INDICES,
+    REBOCAP_24_PARENT_NAMES,
+    REBOCAP_HIERARCHY_SOURCE_REFERENCES,
+    HierarchySourceReference,
     JointDefinition,
     JointDiagnostic,
+    JointHierarchyEvidence,
     Quaternion,
     SkeletonDefinition,
     SourcePose,
@@ -18,14 +24,21 @@ from .fk import (
     quaternion_rotation_angle_degrees,
     quaternions_equivalent,
     retarget_pose,
+    retarget_sequence,
     rotate_vector,
     validate_rebocap24_skeleton,
 )
 
 __all__ = [
     "REBOCAP_24_JOINT_NAMES",
+    "REBOCAP_24_HIERARCHY_EVIDENCE",
+    "REBOCAP_24_PARENT_INDICES",
+    "REBOCAP_24_PARENT_NAMES",
+    "REBOCAP_HIERARCHY_SOURCE_REFERENCES",
+    "HierarchySourceReference",
     "JointDefinition",
     "JointDiagnostic",
+    "JointHierarchyEvidence",
     "Quaternion",
     "SkeletonDefinition",
     "SourcePose",
@@ -40,6 +53,7 @@ __all__ = [
     "quaternion_rotation_angle_degrees",
     "quaternions_equivalent",
     "retarget_pose",
+    "retarget_sequence",
     "rotate_vector",
     "validate_rebocap24_skeleton",
 ]

@@ -4,7 +4,7 @@ ReboRetarget is a planned real-time morphology-retargeting tool for adapting Reb
 
 ## Status
 
-Research and offline-core stage. Phase 1 mapped the installed ReboCap/SteamVR surfaces and the current VRChat OSC tracker protocol. Phase 2A adds a standard-library-only, pure/offline target-skeleton FK core validated entirely with synthetic fixtures. No live application, production SDK adapter, OSC sender, IK, GUI, watcher, or SteamVR control has been implemented.
+Research and offline-core stage. Phase 1 mapped the installed ReboCap/SteamVR surfaces and the current VRChat OSC tracker protocol. Phase 2A added a standard-library-only, pure/offline target-skeleton FK core. Phase 2B confirms the official 24-joint parent hierarchy and validates short synthetic Pose sequences through the same core. No live application, production SDK adapter, OSC sender, IK, GUI, watcher, or SteamVR control has been implemented.
 
 The intended primary environment is Meta Quest 3 + Virtual Desktop + SteamVR + VRChat + ReboCap. The initial direction preserves Quest controller hand tracking while generating eight planned VRChat OSC tracker outputs from the ReboCap skeleton and manually tuned avatar profiles.
 

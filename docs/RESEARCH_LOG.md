@@ -195,3 +195,30 @@ Do not paste secrets, personal data, device identifiers, proprietary binaries/co
   - `Leg Length` scales total thigh-plus-calf length; `Thigh / Calf Balance` transfers a share between segments without changing that total.
 - Result: confirmed for pure synthetic mathematics. Phase 2A acceptance tests passed on Python 3.10, 3.11, and 3.13 (`Ran 30 tests`, `OK` for each runtime).
 - Consequence: proceed only to a short hand-authored or lawfully sanitized ReboCap-shaped offline sequence. Live SDK input, OSC, IK, avatar extraction, and VR application integration remain separate No-Go gates.
+
+## 2026-09-04 — Official ReboCap 24-joint parent hierarchy
+
+- Question: Is the Phase 2A synthetic parent array actually the ReboCap hierarchy, rather than an OSS-derived convention?
+- Primary evidence:
+  - ReboCap official Unity SDK v4, `Assets/RebocapSdk/DemoScenes/SdkManager.cs:39-64` and enum `Assets/RebocapSdk/RebocapWsSdk.cs:74-99`; official archive SHA-256 `E0C0C102D8C45529DF731341E12C2B52BD45823269F43DAD753DBBE9132FE0BF`.
+  - ReboCap official Unreal Engine plugin source v2, `Source/rebocap_runtime/Private/rebocap_source.cpp:115-152`; official archive SHA-256 `AAFA2393FBE81E0F24A513BCB9546FC96147D2893AA7B1C7C33DA1CB110EAA53`.
+  - ReboCap official SDK documentation, “SDK Interface Description” and “24 Bone Names,” last edited 2025-04-17 and accessed 2026-09-04: <https://doc.rebocap.com/en_US/SDK/>.
+- Confirmed observation: the Unity and Unreal parent arrays agree for all 24 ordered joints. The normalized index array is `(-1,0,0,0,1,2,3,4,5,6,7,8,9,9,9,12,13,14,16,17,18,19,20,21)`. Unity encodes the root as `-1`; Unreal uses Pelvis self index `0`; ReboRetarget normalizes the root parent to `None`.
+- Evidence classification: every normalized relation is `CONFIRMED`. No parent relation remains `CORROBORATED`, `INFERRED`, or `UNKNOWN`.
+- Separate uncertainty: parent relation does not prove independent rotational degrees of freedom. The earlier identical Shoulder/Elbow, Wrist/Hand, and Ankle/Foot statistics therefore remain an independence question, not a hierarchy question.
+- T-pose semantic gate: official documentation says all output rotations are relative to T-pose. Unity `SdkManager.cs:385-389,432-433` composes the message Quaternion with default bind rotation; Unreal `rebocap_pose_node.cpp:282-308` composes it with T-pose global rotation. A live adapter must represent this explicitly; passing SDK globals straight through as already-composed absolute bind rotations is rejected.
+- Privacy/license: only source identifiers, public URLs, file/line references, and archive hashes are retained. Official archives/code are not committed.
+
+## 2026-09-04 — Phase 2B synthetic Pose sequence replay
+
+- Question: Does the Phase 2A pure FK core remain deterministic and continuous across short ReboCap-shaped Pose sequences and target proportion changes?
+- Evidence: `retarget_sequence`, synthetic fixture tuples, and 44 passing standard-library `unittest` cases. All inputs are hand-authored; no recording, raw user motion, external dependency, interpolation, clock, device, process, network, or output adapter is involved.
+- Confirmed observations:
+  - A seven-frame sequence advances Hip by 5 degrees and Knee by 10 degrees per frame from straight to 30/60 degrees. Target Knee/Ankle positions match analytic FK to `1e-9` m; maximum long-target Ankle step is 0.175762206 m and no component-space Quaternion comparison is used.
+  - The same sequence preserves identical local rotations on 1.02 m long and 0.70 m short targets. `Leg Length = 1.10` yields 0.473+0.473=0.946 m on every frame.
+  - `Thigh / Calf Balance = +0.10` yields 0.516+0.344=0.86 m. In the straight frame the Ankle endpoint is unchanged while the Knee moves 0.086 m; in bent frames the endpoint changes analytically with the segment redistribution rather than being position-locked.
+  - Four root frames isolate lateral `+0.20` m, vertical `+0.15` m, and forward/back `-0.30` m translation. Every Target joint receives exactly the same delta and rotations remain unchanged.
+  - A four-frame `179, -q(179), -q(181), 181` sequence has shortest Knee-rotation steps `0, 2, 0` degrees, so sign flips and the 180-degree boundary do not create false jumps.
+  - A five-frame Spine3/Collar/Shoulder/Elbow sequence preserves incremental local rotations and parent propagation. A fixture-only Shoulder Width scale of 1.10 expands the rest shoulder span from 0.40 m to 0.44 m without changing the 0.28 m upper-arm or 0.25 m forearm lengths.
+- Result: Phase 2B offline acceptance passes. Product Arm Length, interpolation, IK, contact locking, and tracker/OSC output were not implemented.
+- Consequence: the next smallest gate is pure/offline conversion from Target Skeleton world transforms to the planned tracker transforms. Live SDK connection and OSC transmission remain No-Go.
