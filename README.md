@@ -4,11 +4,11 @@ ReboRetarget is a planned real-time morphology-retargeting tool for adapting Reb
 
 ## Status
 
-Research and project-foundation stage only. No application, SDK connection, OSC sender, retargeting solver, GUI, watcher, or SteamVR control has been implemented yet.
+Public research and pre-implementation design stage only. Phase 1 mapped the installed ReboCap/SteamVR surfaces and the current VRChat OSC tracker protocol, but no application, SDK connection, OSC sender, retargeting solver, GUI, watcher, or SteamVR control has been implemented.
 
 The intended primary environment is Meta Quest 3 + Virtual Desktop + SteamVR + VRChat + ReboCap. The initial direction preserves Quest controller hand tracking while generating eight planned VRChat OSC tracker outputs from the ReboCap skeleton and manually tuned avatar profiles.
 
-Start with [AGENTS.md](AGENTS.md), then read the canonical documents under [`docs/`](docs/).
+Start with [AGENTS.md](AGENTS.md), then read the canonical documents under [`docs/`](docs/). The implementation boundary is summarized in [`docs/INTERFACE_CONTRACT.md`](docs/INTERFACE_CONTRACT.md).
 
 ## Why morphology retargeting?
 
@@ -16,4 +16,6 @@ A single tracker scale cannot correct different thigh/calf, upper-arm/forearm, h
 
 ## Publication and license status
 
-This repository has no remote and has not been published. No license has been selected. Before public release, choose a project license only after checking compatibility with the ReboCap SDK and every included dependency. Do not add proprietary third-party binaries, personal data, device identifiers, secrets, or raw logs.
+This repository is public at <https://github.com/UkkyaGuiyo/ReboRetarget>. It contains research documentation only and does not contain ReboCap SDK files, proprietary binaries, raw logs, personal motion data, or device identifiers.
+
+No project license has been selected. The downloadable ReboCap SDK archives inspected during Phase 1 did not contain an SDK-level license or redistribution grant. Project licensing therefore remains provisional until the vendor terms and all future dependencies are confirmed. No third-party code is licensed merely by being described or linked here.

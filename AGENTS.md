@@ -15,7 +15,8 @@ Treat these files as the repository's durable project memory:
 3. `docs/CURRENT_STATE.md` — current implementation state and the single recommended next task.
 4. `docs/ROADMAP.md` — staged development order and MVP boundary.
 5. `docs/RESEARCH_LOG.md` — evidence, failures, rejected ideas, and open research.
-6. `docs/QUEST_CHEST_YAW_ANCHOR.md` — optional future research, separate from the core MVP.
+6. `docs/INTERFACE_CONTRACT.md` — confirmed external boundaries and the next PoC acceptance gate.
+7. `docs/QUEST_CHEST_YAW_ANCHOR.md` — optional future research, separate from the core MVP.
 
 If these documents disagree, prefer the user's latest explicit instruction, then the original request, then accepted decisions, then verified real-environment evidence, then `CURRENT_STATE`, and finally older plans or notes. Do not silently delete a conflict; resolve it from evidence or record it as unresolved.
 
@@ -24,7 +25,7 @@ If these documents disagree, prefer the user's latest explicit instruction, then
 Before changing anything:
 
 1. Read this file and `PROJECT_CHARTER`, `DECISIONS`, `CURRENT_STATE`, and `ROADMAP`.
-2. Read `RESEARCH_LOG` or the Quest document only when relevant to the current task.
+2. Read `INTERFACE_CONTRACT`, `RESEARCH_LOG`, or the Quest document when relevant to the current task.
 3. Check the current working folder, applicable instructions, `git status`, and relevant diffs.
 4. Restate the requested end state, observable acceptance condition, constraints, non-goals, and the minimum action.
 5. Verify uncertain behavior from the installed environment, official documentation, source, examples, tests, issues, or release notes before inventing a solution.

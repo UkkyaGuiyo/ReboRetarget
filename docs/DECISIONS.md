@@ -100,10 +100,44 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Decision: Public documentation must say what is research, prototype, working, or missing. Do not commit proprietary third-party assets, personal/device data, secrets, or raw logs. Confirm license compatibility before publication.
 - Why: The intended project is public and useful to other ReboCap/VRChat users without misrepresentation or redistribution risk.
 
+### D-016 — Use the official WebSocket SDK as the input boundary
+
+- Date: 2026-09-04
+- Decision: The first input PoC connects to the ReboCap GUI broadcast through the official SDK, requests Unity-coordinate global rotations, and consumes pelvis translation plus the 24-joint quaternion pose.
+- Why: This is the documented, least-invasive interface and supplies the rotation data needed to reconstruct a target skeleton.
+- Boundary: The normal pose message does not provide a position for every bone. Timestamp semantics, live axes, hierarchy, multi-client behavior, and shoulder-tracker effects still require a controlled live validation.
+
+### D-017 — Reject direct `config.data` rewriting for mode switching
+
+- Date: 2026-09-04
+- Decision: Do not implement ReboCap native-output control by rewriting the installed binary configuration store.
+- Why: The candidate output fields share one custom/pickle-derived store with protected calibration, sensor, shoulder, AI, Ground IK, and skeleton settings; safe atomic query/set semantics and concurrent-write behavior are not established.
+- Consequence: Automatic Native/Retarget switching remains blocked pending a supported control surface or a user-authorized, narrowly verified UI-automation fallback.
+
+### D-018 — Keep eight OSC roles as a target, not an unconditional packet count
+
+- Date: 2026-09-04
+- Decision: Preserve Hip, Chest, both Knees, both Feet, and both Upper Arms as the target semantic set, but enable a point only after its absolute position and rotation are sufficiently accurate and stable in VRChat.
+- Why: The set exactly matches the current VRChat maximum, while official documentation warns that inaccurate extra points can degrade IK and that fewer points may work better.
+- Validation: Compare reduced lower-body sets with the full eight points on the actual avatar after FBT calibration.
+
+### D-019 — Treat OSC slots as numbered transport slots, not authoritative roles
+
+- Date: 2026-09-04
+- Decision: ReboRetarget uses a stable internal slot order, but does not assume VRChat assigns a body role from the OSC slot number.
+- Why: Current addresses are numbered; role interpretation occurs through tracker geometry and FBT calibration.
+
+### D-020 — Keep the project license provisional
+
+- Date: 2026-09-04
+- Decision: Do not add a project LICENSE or redistribute ReboCap SDK files yet.
+- Why: The inspected official SDK archives contain no SDK-level LICENSE/NOTICE/COPYING file or explicit redistribution grant. Referenced OSS licenses do not license the ReboCap SDK.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.
-- Exact ReboCap SDK/API version, redistribution terms, skeleton schema, coordinate system, and connection lifecycle.
-- The safe, observable mechanism for toggling only ReboCap's SteamVR body-tracker output.
-- Exact VRChat OSC endpoints, coordinate conventions, tracker activation/calibration behavior, and validated update rate.
+- ReboCap SDK redistribution terms and whether the binary may be bundled or must be user-supplied.
+- The safe, observable mechanism for toggling only ReboCap's SteamVR body-tracker output, including exact state readback and crash recovery.
+- Live ReboCap timestamp semantics, hierarchy/axis validation, multi-client support, shoulder-tracker differentiation, and observed rate/jitter.
+- VRChat OSC alignment choice, duplicate-source behavior, stable point subset, and validated update rate on the real avatar.
 - Which features define the first technical MVP versus the first user-facing v1, especially automatic startup/window attachment.

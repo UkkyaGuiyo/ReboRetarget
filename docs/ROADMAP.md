@@ -12,9 +12,20 @@ Status: **complete for this foundation task**
 
 Exit: all requested memory files and the 12-question report exist, and no application implementation has begun.
 
+## Phase 0.5 — Public research baseline
+
+Status: **complete**
+
+- Commit the Phase 0 memory documents as an auditable baseline.
+- Remove machine-specific paths and scan the publication set for secrets, personal/device data, raw logs, and proprietary artifacts.
+- Create and push a public GitHub repository while accurately labeling the project as research/pre-implementation.
+- Keep the project license provisional until ReboCap SDK redistribution terms are known.
+
+Exit: the public `main` branch contains the safe Phase 0 baseline and does not imply that a working application exists.
+
 ## Phase 1 — Read-only ReboCap and VRChat interface discovery
 
-Status: **next**
+Status: **documentation complete; live measurements remain gated**
 
 - Verify the installed ReboCap version and locate authoritative SDK/API and license information.
 - Characterize available skeleton data: joints, coordinates, units, timing, and connection lifecycle.
@@ -24,9 +35,15 @@ Status: **next**
 
 Exit: an evidence-backed minimal input/output/control contract exists; no protected ReboCap setting has been changed merely for discovery.
 
+Result: exit achieved for static/read-only discovery in `INTERFACE_CONTRACT.md`. The official input and VRChat wire contracts are known. A supported automatic native-output switch was not found, so that control portion remains a deliberate blocker rather than an assumed implementation detail.
+
 ## Phase 2 — Minimal retargeting specification and test data
 
-Status: planned
+Status: **next, beginning with a read-only Pose inspector gate**
+
+- First run the smallest official-SDK Pose inspector in a user-authorized calibrated session.
+- Verify live joint order, axes, hierarchy, timestamp behavior, observed rate/jitter, reconnect, multi-client behavior if safe, and shoulder-tracker influence.
+- Do not send OSC or alter ReboCap/SteamVR settings during this first gate.
 
 - Define source-to-target skeleton semantics and coordinate transforms.
 - Define the six initial manual morphology controls and their measurable effects.
