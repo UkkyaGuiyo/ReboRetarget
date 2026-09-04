@@ -19,3 +19,5 @@ A single tracker scale cannot correct different thigh/calf, upper-arm/forearm, h
 This repository is public at <https://github.com/UkkyaGuiyo/ReboRetarget>. It contains research documentation, the isolated Phase 1.5 aggregate Inspector, and pure/offline retarget, sequence, ReboCap-delta-adapter, tracker-anchor, latest-pose state, VRChat representation, and OSC memory-codec code with synthetic tests. It does not contain ReboCap SDK files, proprietary binaries, raw logs, personal motion data, or device identifiers.
 
 No project license has been selected. The downloadable ReboCap SDK archives inspected during Phase 1 did not contain an SDK-level license or redistribution grant. Project licensing therefore remains provisional until the vendor terms and all future dependencies are confirmed. No third-party code is licensed merely by being described or linked here.
+
+Publication constraints and source origins are documented in [`docs/LEGAL_BOUNDARIES.md`](docs/LEGAL_BOUNDARIES.md) and [`docs/PROVENANCE.md`](docs/PROVENANCE.md).

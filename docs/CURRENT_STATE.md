@@ -69,6 +69,7 @@ Not implemented:
 - Branch is `main`, tracking `origin/main`.
 - `origin` is the public GitHub repository above.
 - No LICENSE exists. The official downloadable ReboCap SDK archives inspected on 2026-09-04 contained no SDK-level license or redistribution grant, so project licensing remains provisional.
+- The verified publication boundary and provenance/history-audit snapshot are recorded in `LEGAL_BOUNDARIES.md` and `PROVENANCE.md`; SDK redistribution/commercial-use permission and project-license selection remain unconfirmed.
 - Publication safety scans found no local user paths, private keys/tokens, email addresses, device identifiers, proprietary binaries, or raw logs in committed content.
 - Phase 1.5 observed an already-running ReboCap/SteamVR/Virtual Desktop/VRChat environment. The Inspector did not change their settings or send OSC. Later Watcher repair and VRChat restart were separately authorized recovery work, not part of the read-only observation.
 
