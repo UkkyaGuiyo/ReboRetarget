@@ -115,6 +115,9 @@ Phase 2F-A is documented only as the gate after Phase 2E PASS. Do not combine th
 - Phase 2C commit `07d525b` is published on `origin/main`.
 - Phase 2D commit `616edfb` was independently test-audited, received Scope Guard `ACCEPT`, and is published on `origin/main`.
 - Phase 2E safety-protocol commit `5a3984a` received Scope Guard and legal/provenance acceptance and is published on `origin/main`.
-- The pure/offline latest-pose primitive and its tests are implemented in the current repository state. No live validation was run.
-- The Phase 2F-A controlled-motion protocol is prepared in the current repository state. It was not run; no human motion, live connection, or VR application interaction occurred.
+- Latest-pose commit `f841460542d118809492e27814781e6f119c1b9d` passed independent test/security/provenance and Scope Guard review and is published on `origin/main`.
+- Phase 2F-A protocol commit `f1c352684553289f76fe0a97d5e80ba5b0174333` passed Scope Guard, documentation, and legal/provenance review and is published on `origin/main`. It was not run.
+- Publication/provenance commit `f4e1e70687998770f0669eef1ee703c271574b85` passed Scope Guard, documentation, and legal/provenance review and is published on `origin/main`.
+- `OVERNIGHT_AUTONOMOUS_REPORT.md` is prepared in the current repository state. Its own commit hash is intentionally not guessed inside the report; Git history and the final ChatGPT response record it after commit.
+- No live validation, human motion, OSC/UDP/direct socket send, or VR application interaction occurred during these tasks.
 - Deployment: none.
