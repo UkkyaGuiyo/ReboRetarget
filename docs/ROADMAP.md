@@ -39,16 +39,14 @@ Result: exit achieved for static/read-only discovery in `INTERFACE_CONTRACT.md`.
 
 ## Phase 2 — Minimal retargeting specification and test data
 
-Status: **next, beginning with a read-only Pose inspector gate**
+Status: **in progress; limited live observation and Phase 2A offline FK are complete**
 
-- First run the smallest official-SDK Pose inspector in a user-authorized calibrated session.
-- Verify live joint order, axes, hierarchy, timestamp behavior, observed rate/jitter, reconnect, multi-client behavior if safe, and shoulder-tracker influence.
-- Do not send OSC or alter ReboCap/SteamVR settings during this first gate.
+- A limited official-SDK Pose observation measured the 24-joint stream and cadence without retaining raw motion. It ended after a concurrent VRChat crash, so multi-client safety, known-action axes, reconnect, and shoulder-present/absent behavior remain unverified and live reconnection is not assumed safe.
+- Phase 2A implemented pure/offline global-to-local conversion, motion-delta transfer, and target-skeleton FK. Thirty synthetic numeric tests prove straight, bent, compound, long/short, source-length-independent, mirrored, upper-body propagation, inheritance, non-identity-rest, and leg-control cases without any live-system access.
 
-- Define source-to-target skeleton semantics and coordinate transforms.
-- Define the six initial manual morphology controls and their measurable effects.
+- Leg Length and Thigh/Calf Balance now have explicit initial mathematical semantics. The other four morphology controls remain to be specified from controlled cases.
 - Capture or construct the smallest lawful, non-personal pose samples needed to check straight legs, crouch, crossing, kick, weight shift, outstretched arms, and folded arms.
-- Select a minimal technology stack based on Phase 1 evidence.
+- Validate a short hand-authored or sanitized ReboCap-shaped offline pose sequence before returning to any live input.
 
 Exit: solver inputs, outputs, invariants, and pose acceptance cases are explicit enough to implement without speculative infrastructure.
 

@@ -133,6 +133,21 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Decision: Do not add a project LICENSE or redistribute ReboCap SDK files yet.
 - Why: The inspected official SDK archives contain no SDK-level LICENSE/NOTICE/COPYING file or explicit redistribution grant. Referenced OSS licenses do not license the ReboCap SDK.
 
+### D-021 — Transfer joint motion as local rotation deltas onto target rest transforms
+
+- Date: 2026-09-04
+- Decision: For the offline FK core, recover each source local rotation as `inverse(parent_global) * child_global`, remove the source rest-local rotation, apply the resulting motion delta after the target rest-local rotation, and run FK using only target rest-local vectors.
+- Convention: Hamilton `(w,x,y,z)` active rotations; `left * right` applies `right` first and then `left`. Quaternion sign is not identity: `q` and `-q` are treated as the same rotation.
+- Why: This preserves joint posture while allowing source and target bone lengths and rest rotations to differ. It also keeps a straight source knee straight instead of solving the target foot back to the source position.
+- Boundary: Phase 2A proves this with synthetic coordinates only. Installed ReboCap axis signs and the proposed 24-joint hierarchy still require a separately authorized evidence gate before live use.
+
+### D-022 — Give leg controls total-length and fixed-total balance semantics
+
+- Date: 2026-09-04
+- Decision: `Leg Length` scales total thigh-plus-calf length. `Thigh / Calf Balance` shifts the thigh's share of that already-scaled total and transfers the same amount from the calf, preserving total length.
+- Why: `Leg Length = 1.10` therefore means exactly 10% more total leg length, while Balance moves the target knee without also changing overall leg reach.
+- Boundary: This is the initial synthetic-core meaning. User-facing ranges and avatar-specific defaults remain future work.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.

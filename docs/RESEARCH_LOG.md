@@ -179,3 +179,19 @@ Do not paste secrets, personal data, device identifiers, proprietary binaries/co
   - A later short relaunch failure was a Watcher startup race. After correcting the Watcher, VRChat remained running for more than 120 seconds with the Inspector disconnected.
 - Result: the direct crash cause remains inconclusive. Temporal overlap does not prove the Inspector caused it, and absence of a kill command does not prove that an additional SDK client could not contribute indirectly.
 - Consequence: do not claim Phase 1.5 was non-disruptive. Do not reconnect an additional live SDK client until a separately authorized, controlled safety check is defined. Continue only with a pure/offline Target Skeleton FK transform PoC; keep OSC, IK, native-output switching, and Watcher integration out of that step.
+
+## 2026-09-04 — Phase 2A pure/offline Target Skeleton FK
+
+- Question: Can a global-rotation source pose be reconstructed on a target skeleton with different segment lengths while preserving joint posture rather than source joint positions?
+- Environment: Python 3.10.11 standard-library implementation, additionally exercised on Python 3.11 and 3.13; hand-authored synthetic skeletons and poses only. No ReboCap SDK/process/network, Quest, Virtual Desktop, SteamVR, VRChat, OSC, Tracker, Watcher, or UI access.
+- Evidence: `reboretarget/fk.py`, `tests/synthetic_fixtures.py`, and 30 passing `unittest` cases in `tests/test_fk.py`; numeric details in `OFFLINE_FK_POC_REPORT.md`.
+- Confirmed observations:
+  - The exact confirmed ReboCap 24-name order can be strictly validated and converted from ordered `(w,x,y,z)` global rotations into immutable internal values.
+  - With Hamilton active rotations, `inverse(parent_global) * child_global` recovers identity and compound child-local rotations. Tests also cover multiplication order, non-identity source/target rest rotations, and `q/-q` equivalence.
+  - Motion delta `inverse(source_rest_local) * source_local`, followed by `target_rest_local * delta`, preserves the same local joint posture on a different target rest skeleton.
+  - FK using target rest-local vectors leaves a straight knee straight for both a 1.02 m long target leg and a 0.70 m short target leg. Knee 90 degrees and Hip 30 plus Knee 45 degrees produced their analytic target positions and rotations.
+  - Left/right mirrored fixtures produce mirrored positions with equivalent rotations. Parent-world rotation correctly rotates child rest vectors.
+  - A per-joint source-local diagnostic preserves exact 0-degree inheritance, a measured 15-degree independent rotation, a small 0.05-degree rotation, and left/right 0/12-degree asymmetry as numbers. It intentionally does not classify them or explain why a live pair is equal.
+  - `Leg Length` scales total thigh-plus-calf length; `Thigh / Calf Balance` transfers a share between segments without changing that total.
+- Result: confirmed for pure synthetic mathematics. Phase 2A acceptance tests passed on Python 3.10, 3.11, and 3.13 (`Ran 30 tests`, `OK` for each runtime).
+- Consequence: proceed only to a short hand-authored or lawfully sanitized ReboCap-shaped offline sequence. Live SDK input, OSC, IK, avatar extraction, and VR application integration remain separate No-Go gates.

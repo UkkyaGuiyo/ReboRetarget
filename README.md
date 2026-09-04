@@ -4,7 +4,7 @@ ReboRetarget is a planned real-time morphology-retargeting tool for adapting Reb
 
 ## Status
 
-Public research and pre-implementation design stage only. Phase 1 mapped the installed ReboCap/SteamVR surfaces and the current VRChat OSC tracker protocol, but no application, SDK connection, OSC sender, retargeting solver, GUI, watcher, or SteamVR control has been implemented.
+Research and offline-core stage. Phase 1 mapped the installed ReboCap/SteamVR surfaces and the current VRChat OSC tracker protocol. Phase 2A adds a standard-library-only, pure/offline target-skeleton FK core validated entirely with synthetic fixtures. No live application, production SDK adapter, OSC sender, IK, GUI, watcher, or SteamVR control has been implemented.
 
 The intended primary environment is Meta Quest 3 + Virtual Desktop + SteamVR + VRChat + ReboCap. The initial direction preserves Quest controller hand tracking while generating eight planned VRChat OSC tracker outputs from the ReboCap skeleton and manually tuned avatar profiles.
 
@@ -16,6 +16,6 @@ A single tracker scale cannot correct different thigh/calf, upper-arm/forearm, h
 
 ## Publication and license status
 
-This repository is public at <https://github.com/UkkyaGuiyo/ReboRetarget>. It contains research documentation only and does not contain ReboCap SDK files, proprietary binaries, raw logs, personal motion data, or device identifiers.
+This repository is public at <https://github.com/UkkyaGuiyo/ReboRetarget>. It contains research documentation, the isolated Phase 1.5 aggregate Inspector, and the pure/offline Phase 2A mathematics and synthetic tests. It does not contain ReboCap SDK files, proprietary binaries, raw logs, personal motion data, or device identifiers.
 
 No project license has been selected. The downloadable ReboCap SDK archives inspected during Phase 1 did not contain an SDK-level license or redistribution grant. Project licensing therefore remains provisional until the vendor terms and all future dependencies are confirmed. No third-party code is licensed merely by being described or linked here.
