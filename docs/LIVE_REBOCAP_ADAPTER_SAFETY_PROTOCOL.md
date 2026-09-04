@@ -1,8 +1,8 @@
 # Live ReboCap Adapter Safety Protocol
 
-Status: **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**
+Status: **EXECUTED ONCE / UNVERIFIED / NEW AUTHORIZATION REQUIRED FOR ANY RETRY**
 
-This is the preflight and evidence contract for a future, short Phase 2E receive-only validation. It is not an executable script and grants no permission to touch a live system. VRChat crashed during the earlier additional-SDK-client observation; whether that client contributed to the crash remains unresolved.
+This is the preflight and evidence contract for a short Phase 2E receive-only validation. The user authorized one run on 2026-09-05. The official SDK connection opened and closed successfully, but no Pose callback arrived during 20.015 seconds, so the live value path remains `UNVERIFIED`; see [`LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md`](LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md). This document grants no continuing permission to touch a live system. VRChat crashed during the earlier additional-SDK-client observation; whether that client contributed to the crash remains unresolved.
 
 ## Evidence labels
 
@@ -89,7 +89,7 @@ Never force an application, transport, or network failure to observe a disconnec
 ## Result template
 
 ```text
-Phase 2E run: NOT RUN | PASS | FAIL | ABORTED
+Phase 2E run: NOT RUN | PASS | FAIL | UNVERIFIED | ABORTED
 Authorization: CONFIRMED | UNVERIFIED
 Hard Safe Point: CONFIRMED | UNVERIFIED (Virtual Desktop service/session recorded separately)
 Client mode: single-client-first
@@ -114,4 +114,4 @@ Phase 2F body-motion execution: NOT RUN
 
 ## Authorization required next
 
-The pure/offline capacity-one latest-pose state primitive is complete. Actual Phase 2E execution remains `WAITING_FOR_USER`. A future request must explicitly authorize one 60-second single-client-first run after the natural Hard Safe Point is present; general permission to continue development is not authorization for live execution.
+The pure/offline capacity-one latest-pose state primitive is complete. One authorized Phase 2E connection was safe but returned zero Pose callbacks, so it did not pass. Before any retry, the user must confirm that ReboCap's action-calibrated live skeleton/Pose is visibly updating and explicitly authorize a new bounded single-client-first run at a newly confirmed natural Hard Safe Point. The prior permission is spent, and general permission to continue development is not authorization for another live execution. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS.

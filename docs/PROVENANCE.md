@@ -22,6 +22,7 @@ Here, **tracked** means the files recorded by the baseline commit. **Reachable**
 | `reboretarget/latest_pose.py` | Independently authored standard-library capacity-one synchronization/state primitive. |
 | `tests/` | Hand-authored synthetic fixtures and deterministic tests; no captured motion, vendor fixture, or SDK code. |
 | `research/live_pose_inspector.py` | Project-authored aggregate observer. It dynamically imports a user-supplied official SDK outside the repository and retains aggregates rather than raw Pose frames. |
+| `research/live_retarget_safety_probe.py` | Independently authored bounded Phase 2E wrapper around the documented official SDK callback/open/close surface and existing project core. It imports the user-supplied SDK from outside the repository, has no copied vendor implementation or direct sender, and returns sanitized aggregate evidence rather than Pose values. |
 | `docs/` | Project-authored summaries, decisions, test reports, factual identifiers, citations, and sanitized aggregates; no vendor archive, decompiled source, or raw log. |
 
 The factual 24-joint name list and public interface/address constants naturally may match official documentation. They are factual interface data and are not treated as copied implementation.

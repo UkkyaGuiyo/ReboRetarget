@@ -183,4 +183,4 @@ Aborts, ambiguity, and interpretation limits: ...
 
 ## Authorization required next
 
-Phase 2F-A remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. The immediate project gate is still the separately authorized Phase 2E run. Only after Phase 2E passes may the user separately authorize this one controlled-motion run at a newly confirmed natural Safe Point.
+Phase 2F-A remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. One authorized Phase 2E connection opened safely but returned zero Pose callbacks and is `UNVERIFIED`; it did not satisfy this protocol's prerequisite. Only after a newly authorized Phase 2E retry passes may the user separately authorize this one controlled-motion run at a newly confirmed natural Safe Point.

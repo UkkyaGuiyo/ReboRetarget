@@ -4,11 +4,11 @@ Last updated: 2026-09-05
 
 ## Current checkpoint
 
-Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. Phase 2E offline preparation includes the accepted safety protocol and a pure capacity-one latest-pose state primitive. Phase 2F-A now has a separate controlled-motion safety protocol, but neither live gate has been run or authorized. The combined suite passes 103 tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
+Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. Phase 2E offline preparation includes the accepted safety protocol, a pure capacity-one latest-pose state primitive, and a research-only bounded runner. One authorized Phase 2E connection opened and closed safely but received zero Pose callbacks, so the Live gate is `UNVERIFIED`. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS. The combined suite passes 118 tests. The earlier Phase 1.5 live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
 
 ## Actual implementation state
 
-**No live or user-facing ReboRetarget application exists.** The repository contains a small pure/offline FK core, a separate ReboCap-delta value adapter, an eight-role semantic tracker-anchor builder, a capacity-one latest-pose state primitive, a network-free VRChat OSC representation/codec layer, confirmed hierarchy metadata, in-memory synthetic fixtures/tests, documentation, and the isolated research-only aggregate Pose Inspector. None is connected to ReboCap, VRChat, SteamVR, Virtual Desktop, Quest, or a GUI; the OSC codec only transforms values to and from bytes in memory.
+**No live or user-facing ReboRetarget application exists.** The repository contains a small pure/offline FK core, a separate ReboCap-delta value adapter, an eight-role semantic tracker-anchor builder, a capacity-one latest-pose state primitive, a network-free VRChat OSC representation/codec layer, confirmed hierarchy metadata, in-memory synthetic fixtures/tests, documentation, the isolated aggregate Pose Inspector, and a bounded research-only SDK safety probe. The probe is not a product client, daemon, output sender, or deployment; the OSC codec only transforms values to and from bytes in memory.
 
 Not implemented:
 
@@ -62,6 +62,8 @@ Not implemented:
 - `reboretarget/latest_pose.py` adds a generic capacity-one slot with immutable snapshots, strict receive/source timestamp watermarks, overwrite-only sequence numbers, explicit stale/disconnected states, and rearm without watermark reset. Twenty deterministic tests bring the total to 103 on Python 3.10, 3.11, and 3.13.
 - The slot uses one `threading.Lock` to make multi-field callback/consumer transitions atomic but starts and owns no thread. It has no SDK type, payload validation, system-clock read, timer, scheduler, queue, reconnect, I/O, persistence, logging, or metrics subsystem.
 - Tests use 0.250 seconds as a provisional Phase 2E stale candidate because Phase 1.5 observed a maximum receive gap of 130.4663 ms and zero gaps at least 250 ms. This is not a universal product default and remains subject to controlled live validation.
+- `research/live_retarget_safety_probe.py` is a research-only, explicitly configured 20-second runner for one official external SDK client. Fifteen fake-SDK tests cover exact-once lifecycle, no retry, callback validation, delta/canonical construction, 30 Hz latest-only consumption, eight anchors, sixteen memory-only OSC round trips, invalidation, duration, privacy, and the absence of a direct sender/file writer. These raise the combined suite to 118 tests on Python 3.10, 3.11, and 3.13.
+- The authorized Phase 2E run opened and closed the SDK successfully in 20.015 seconds, kept ReboCap alive, and changed no application or setting. It delivered zero callbacks, so no Live value reached the adapter, latest slot, Target FK, anchors, OSC representation, or latency measurement. This is `UNVERIFIED`, not PASS or an invalid-frame failure.
 - `CONTROLLED_MOTION_VALIDATION_PROTOCOL.md` defines one future Phase 2F-A run with a 45-second stop-new-cues cutoff inside a 60-second maximum, safe self-selected motions, optional skips, baseline-derived detectable-response thresholds, aggregate-only evidence, and a separate authorization gate. It has not been executed and contains no harness or raw-result schema file.
 
 ## Verified repository facts
@@ -76,13 +78,13 @@ Not implemented:
 ## Go / No-Go
 
 - **COMPLETE (offline only):** the pure capacity-one latest-pose primitive covers overwrite-on-newer, ordering watermarks, stale/disconnect invalidation, and rearm. Its `threading.Lock` provides atomic access but owns no thread, scheduler, process, or network dependency.
-- **WAITING_FOR_USER:** the Phase 2E live adapter value-path validation is not authorized. It may run only at the natural Safe Point and with explicit authorization defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`.
+- **UNVERIFIED / WAITING_FOR_USER:** one Phase 2E connection was safe but had zero callbacks. Any retry requires the user to first confirm visibly updating action-calibrated ReboCap Pose, then provide a new explicit one-run authorization at a newly confirmed natural Safe Point.
 - **WAITING_FOR_USER / LATER:** Phase 2F-A is also not authorized. It requires Phase 2E PASS, a new explicit authorization, and the separate Safe Point in `CONTROLLED_MOTION_VALIDATION_PROTOCOL.md`; Phase 2E permission does not carry over.
 - **NO-GO:** creating the Safe Point by starting, stopping, or restarting applications; multi-client testing without separate approval; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
 
 ## Single recommended next task
 
-Stop autonomous live work at this gate. The separate Phase 2E live adapter value-path validation remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. Its natural Safe Point and explicit authorization gate are defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`; Codex must not create that state by starting, stopping, or restarting any application. When and only when the user explicitly authorizes one bounded run at an already-present Safe Point, perform the protocol's read-only preflight before opening one official SDK client.
+Stop autonomous live work at this gate. Ask the user to confirm that the ReboCap action-calibrated live skeleton/Pose is visibly updating. Only after that confirmation and a new explicit one-run authorization at a newly confirmed natural Safe Point may Phase 2E be retried. Codex must not create that state by starting, stopping, restarting, configuring, or recalibrating any application.
 
 Phase 2F-A is documented only as the gate after Phase 2E PASS. Do not combine their authorizations or start controlled motion during Phase 2E.
 
@@ -93,6 +95,7 @@ Phase 2F-A is documented only as the gate after Phase 2E PASS. Do not combine th
 - Quaternion validity, joint count, Pelvis translation, timestamp unit, and cadence were live-observed. Parent hierarchy is now confirmed from official code, while axis signs against known actions, safe multi-client support, and the physical shoulder-tracker effect versus a no-shoulder A/B remain unverified.
 - VRChat crashed during the live observation. The crash signature is known, and no kill command was issued, but causality involving the additional SDK client remains unresolved.
 - Receive gaps/bursts and six backlog candidates justify the now-implemented offline latest-Pose semantics. Their exact SDK-versus-client scheduling origin and live integration remain unresolved.
+- The authorized 2026-09-05 Phase 2E connection returned zero Pose callbacks despite a successful SDK open. The absence occurred upstream of the callback boundary; its cause remains unverified because this authorization did not permit UI/settings/calibration changes, a retry, or expanded reverse engineering.
 - External disconnect/reconnect and stale-frame recovery were not exercised; the recorded disconnect was Inspector shutdown.
 - VRChat OSC behavior has been verified from current official documentation, but not yet on the user's actual VRChat avatar/environment.
 - Current release notes add a single-pulse head-position snap, while the main tracker page does not specify head-position streaming thresholds. Do not apply the documented head-rotation 300 ms/10-second rules to head position by inference.
@@ -119,5 +122,5 @@ Phase 2F-A is documented only as the gate after Phase 2E PASS. Do not combine th
 - Phase 2F-A protocol commit `f1c352684553289f76fe0a97d5e80ba5b0174333` passed Scope Guard, documentation, and legal/provenance review and is published on `origin/main`. It was not run.
 - Publication/provenance commit `f4e1e70687998770f0669eef1ee703c271574b85` passed Scope Guard, documentation, and legal/provenance review and is published on `origin/main`.
 - `OVERNIGHT_AUTONOMOUS_REPORT.md` is prepared in the current repository state. Its own commit hash is intentionally not guessed inside the report; Git history and the final ChatGPT response record it after commit.
-- No live validation, human motion, OSC/UDP/direct socket send, or VR application interaction occurred during these tasks.
+- One Phase 2E receive-only connection was executed and remained `UNVERIFIED` because it returned zero Pose callbacks. No human motion cue, OSC/UDP/direct output send, or VR application interaction occurred.
 - Deployment: none.
