@@ -224,17 +224,17 @@ Virtual Desktop/Quest境界と、次のread-only PoC acceptance surfaceも明記
 
 ## 24. git status
 
-最終verification時点の予定状態:
+最終verification時点:
 
 ```text
 ## main...origin/main
 ```
 
-tracked/untracked changeなし。もし最終push失敗時はこの記述を成功扱いせず、実statusを報告する。
+tracked/untracked changeなし。local `main`と`origin/main`は一致。
 
 ## 25. GitHubへのpush状態
 
-Phase 0 baselineはpush済み。research commitとこのreport commitも最終検証後に`origin/main`へpushし、GitHub readbackでcommit一致とPublic状態を確認する。
+Phase 0 baseline、research commit、このreportを含む文書commitを`origin/main`へpush済み。GitHub readbackで三commit、report file、default branch `main`、Public状態を確認した。
 
 ## 26. 今回、製品本体の実装を始めていないこと
 
