@@ -147,3 +147,35 @@ Do not paste secrets, personal data, device identifiers, proprietary binaries/co
 5. Real VRChat test of origin/yaw alignment, point quality, packet rate, reduced versus eight-point configurations, and duplicate-source behavior.
 6. Vendor clarification for SDK redistribution/bundling.
 7. Quest chest-yaw accessibility remains independent and non-blocking.
+
+## 2026-09-04 — Phase 1.5 live Pose observation
+
+- Question: What does the installed ReboCap build emit during ordinary use through the official SDK, without retaining raw motion or sending output?
+- Environment: an already-running calibrated ReboCap, SteamVR, Virtual Desktop, and VRChat session; official Python SDK loaded from outside the repository; `UnityCoordinate` and global rotations.
+- Evidence: aggregate-only output from `research/live_pose_inspector.py`; 29,233 callbacks across 487.658 seconds. The aggregate file and raw application logs are not retained in the repository.
+- Confirmed timing observations:
+  - Average callback rate was 59.9436 Hz. Receive interval median was 16.5 ms (60.6061 Hz), p95 17.8 ms, p99 18.3 ms, and maximum 130.4663 ms.
+  - There were 15 receive gaps at least 50 ms, 7 at least 100 ms, none at least 250 ms, 64 intervals below 4 ms, and 6 gap-followed burst candidates.
+  - Source timestamps were Unix seconds after wrapper conversion. All 29,232 deltas were monotonic; median source interval was 16.9 ms, p95/p99 18.0 ms, and maximum 51.0001 ms. No source jump of at least 250 ms occurred.
+  - Receive-minus-source difference was median 0.3 ms, p95 0.9 ms, p99 1.1 ms, with a 173.8474 ms connection-start maximum consistent with initial catch-up.
+- Confirmed Pose observations:
+  - Every callback contained 24 joints and every Quaternion sample was finite and normalized within `1e-7`; invalid frames were zero. The SDK wrapper/example order `(w,x,y,z)` was used.
+  - Pelvis translation remained finite. Its observed XYZ range was `(0.798379, 0.743274, 0.816602)` metres and maximum single-frame displacement was 0.019721 metres.
+  - Collar, Shoulder, Elbow, Wrist, Hip, Knee, Ankle, and Foot streams all changed continuously. Shoulder and Elbow activity exceeded Spine activity in this session.
+  - R_Shoulder/R_Elbow, each Wrist/Hand pair, and each Ankle/Foot pair produced identical aggregate motion statistics. These pairs are not treated as proven independent degrees of freedom.
+  - `static_index` was `-1` for every callback, so contact/static behavior was not demonstrated.
+- Inference: the input quality is sufficient to begin a pure Target Skeleton FK transform PoC. The gap/burst pattern supports latest-Pose consumption rather than replaying an accumulated FIFO.
+- Unverified: known-action axis signs, local hierarchy, independent Foot and Hand information, shoulder-tracker-present versus absent effect, chest Yaw drift separated from voluntary turning, and external disconnect/reconnect behavior.
+- Privacy/result: no raw Pose frames, identifiers, absolute local paths, account data, or unredacted logs are committed. The Inspector is research-only and does not bundle the official SDK.
+
+## 2026-09-04 — VRChat incident during Phase 1.5 observation
+
+- Question: Did the Inspector terminate VRChat, and is live multi-client SDK observation proven safe?
+- Evidence: process history, VRChat logs and Windows crash evidence, Inspector command history, and the later restart observation. Raw logs and local paths are not retained here.
+- Confirmed observations:
+  - The first VRChat instance crashed in `UnityPlayer.dll` with access violation `0xc0000005` while the Inspector was connected.
+  - No VRChat stop/kill command was issued by the Inspector or Codex. The Inspector only opened the confirmed ReboCap WebSocket endpoint and recorded aggregates.
+  - The Inspector was stopped immediately after the user raised the incident.
+  - A later short relaunch failure was a Watcher startup race. After correcting the Watcher, VRChat remained running for more than 120 seconds with the Inspector disconnected.
+- Result: the direct crash cause remains inconclusive. Temporal overlap does not prove the Inspector caused it, and absence of a kill command does not prove that an additional SDK client could not contribute indirectly.
+- Consequence: do not claim Phase 1.5 was non-disruptive. Do not reconnect an additional live SDK client until a separately authorized, controlled safety check is defined. Continue only with a pure/offline Target Skeleton FK transform PoC; keep OSC, IK, native-output switching, and Watcher integration out of that step.
