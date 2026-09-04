@@ -176,6 +176,13 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Why: VRChat does not define numbered slots as semantic roles, head alignment is not a ninth body tracker, and one generic "calibration" concept would obscure different ownership and timing semantics.
 - Boundary: ReboCap action calibration, VRChat FBT calibration, OSC head alignment, SteamVR playspace, and any future ReboRetarget recenter remain distinct. Phase 2D implements no recenter or live calibration behavior.
 
+### D-027 — Gate live adapter validation on a natural Safe Point
+
+- Date: 2026-09-05
+- Decision: A live ReboCap adapter validation requires explicit user authorization after confirming a natural Safe Point: ReboCap is already running, VRChat and SteamVR are not running, and no active VR session exists. Codex may inspect state read-only but must not create the Safe Point by starting, stopping, or restarting anything. A Virtual Desktop background service alone is distinct from an active session; any ambiguity fails closed.
+- Why: VRChat crashed during the earlier additional-SDK-client observation, and causality remains unresolved. The first controlled validation must minimize concurrent clients and preserve all user application state.
+- Boundary: Start single-client-first. Multi-client support remains `UNVERIFIED` and requires separate opt-in approval. The protocol authorizes no OSC/UDP send, application or setting change, automatic reconnect, or Phase 2F body-motion execution.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.

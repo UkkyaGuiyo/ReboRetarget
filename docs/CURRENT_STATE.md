@@ -70,14 +70,15 @@ Not implemented:
 
 ## Go / No-Go
 
-- **CONDITIONAL GO:** design the next Live ReboCap Adapter Safety Validation as a separate, explicitly authorized procedure covering SDK single/multi-client conditions, live delta adaptation, latest-pose behavior near 60 Hz, and disconnect invalidation, while still sending no VRChat OSC.
-- **NO-GO:** starting that live procedure without a safe point and explicit authorization; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
+- **GO (offline only):** implement and test a pure capacity-one latest-pose state primitive with overwrite-on-newer, stale/disconnect invalidation, and no SDK, clock, thread, scheduler, process, or network dependency.
+- **WAITING_FOR_USER:** the Phase 2E live adapter value-path validation is not authorized. It may run only at the natural Safe Point and with explicit authorization defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`.
+- **NO-GO:** creating the Safe Point by starting, stopping, or restarting applications; multi-client testing without separate approval; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
 
 ## Single recommended next task
 
-Design the smallest separate Phase 2E Live ReboCap Adapter Safety Validation procedure. It must resolve SDK single/multi-client conditions and protect an active VR session before any connection is attempted; then validate live delta adaptation, latest-pose behavior near 60 Hz, and disconnect invalidation without sending VRChat OSC. Do not start or touch ReboCap, VRChat, SteamVR, Virtual Desktop, or Quest until the user explicitly authorizes a safe point.
+Implement the smallest pure/offline capacity-one latest-pose state primitive. It should accept validated pose values plus explicit timestamps, replace older state only with a newer pose, invalidate on an explicit stale/disconnect event, and expose the latest valid value without adding an SDK client, clock, thread, queue, scheduler, reconnect loop, process detector, or network path. Prove overwrite, out-of-order rejection, invalidation, and no-backlog behavior with deterministic tests.
 
-Use the priority order in D-011. If a live VR session is active, use quiet/read-only inspection and do not foreground, restart, stop, reset, or change ReboCap/SteamVR/VRChat/Virtual Desktop/Quest state without explicit authorization.
+The separate Phase 2E live adapter value-path validation remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. Its natural Safe Point and explicit authorization gate are defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`; Codex must not create that state by starting, stopping, or restarting any application.
 
 ## Blockers and unverified items
 
@@ -106,5 +107,6 @@ Use the priority order in D-011. If a live VR session is active, use quiet/read-
 - Phase 2A commit `1731c9d` is published on `origin/main`.
 - Phase 2B commit `54c6dc7` is published on `origin/main`.
 - Phase 2C commit `07d525b` is published on `origin/main`.
-- Phase 2D source, synthetic tests, and documentation are pending Scope Guard review and a separate commit at this handoff.
+- Phase 2D commit `616edfb` was independently test-audited, received Scope Guard `ACCEPT`, and is published on `origin/main`.
+- The Phase 2E offline safety-protocol documentation gate is complete in the working tree but remains pending review and commit at this handoff. No live validation was run.
 - Deployment: none.
