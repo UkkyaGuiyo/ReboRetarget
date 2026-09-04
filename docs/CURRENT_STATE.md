@@ -4,7 +4,7 @@ Last updated: 2026-09-05
 
 ## Current checkpoint
 
-Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. Phase 2E offline preparation now includes the accepted safety protocol and a pure capacity-one latest-pose state primitive. The combined suite passes 103 tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
+Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. Phase 2E offline preparation includes the accepted safety protocol and a pure capacity-one latest-pose state primitive. Phase 2F-A now has a separate controlled-motion safety protocol, but neither live gate has been run or authorized. The combined suite passes 103 tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
 
 ## Actual implementation state
 
@@ -62,6 +62,7 @@ Not implemented:
 - `reboretarget/latest_pose.py` adds a generic capacity-one slot with immutable snapshots, strict receive/source timestamp watermarks, overwrite-only sequence numbers, explicit stale/disconnected states, and rearm without watermark reset. Twenty deterministic tests bring the total to 103 on Python 3.10, 3.11, and 3.13.
 - The slot uses one `threading.Lock` to make multi-field callback/consumer transitions atomic but starts and owns no thread. It has no SDK type, payload validation, system-clock read, timer, scheduler, queue, reconnect, I/O, persistence, logging, or metrics subsystem.
 - Tests use 0.250 seconds as a provisional Phase 2E stale candidate because Phase 1.5 observed a maximum receive gap of 130.4663 ms and zero gaps at least 250 ms. This is not a universal product default and remains subject to controlled live validation.
+- `CONTROLLED_MOTION_VALIDATION_PROTOCOL.md` defines one future Phase 2F-A run with a 45-second stop-new-cues cutoff inside a 60-second maximum, safe self-selected motions, optional skips, baseline-derived detectable-response thresholds, aggregate-only evidence, and a separate authorization gate. It has not been executed and contains no harness or raw-result schema file.
 
 ## Verified repository facts
 
@@ -75,11 +76,14 @@ Not implemented:
 
 - **COMPLETE (offline only):** the pure capacity-one latest-pose primitive covers overwrite-on-newer, ordering watermarks, stale/disconnect invalidation, and rearm. Its `threading.Lock` provides atomic access but owns no thread, scheduler, process, or network dependency.
 - **WAITING_FOR_USER:** the Phase 2E live adapter value-path validation is not authorized. It may run only at the natural Safe Point and with explicit authorization defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`.
+- **WAITING_FOR_USER / LATER:** Phase 2F-A is also not authorized. It requires Phase 2E PASS, a new explicit authorization, and the separate Safe Point in `CONTROLLED_MOTION_VALIDATION_PROTOCOL.md`; Phase 2E permission does not carry over.
 - **NO-GO:** creating the Safe Point by starting, stopping, or restarting applications; multi-client testing without separate approval; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
 
 ## Single recommended next task
 
 Stop autonomous live work at this gate. The separate Phase 2E live adapter value-path validation remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. Its natural Safe Point and explicit authorization gate are defined in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`; Codex must not create that state by starting, stopping, or restarting any application. When and only when the user explicitly authorizes one bounded run at an already-present Safe Point, perform the protocol's read-only preflight before opening one official SDK client.
+
+Phase 2F-A is documented only as the gate after Phase 2E PASS. Do not combine their authorizations or start controlled motion during Phase 2E.
 
 ## Blockers and unverified items
 
@@ -111,4 +115,5 @@ Stop autonomous live work at this gate. The separate Phase 2E live adapter value
 - Phase 2D commit `616edfb` was independently test-audited, received Scope Guard `ACCEPT`, and is published on `origin/main`.
 - Phase 2E safety-protocol commit `5a3984a` received Scope Guard and legal/provenance acceptance and is published on `origin/main`.
 - The pure/offline latest-pose primitive and its tests are implemented in the current repository state. No live validation was run.
+- The Phase 2F-A controlled-motion protocol is prepared in the current repository state. It was not run; no human motion, live connection, or VR application interaction occurred.
 - Deployment: none.

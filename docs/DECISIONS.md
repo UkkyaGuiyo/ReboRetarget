@@ -183,6 +183,13 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Why: VRChat crashed during the earlier additional-SDK-client observation, and causality remains unresolved. The first controlled validation must minimize concurrent clients and preserve all user application state.
 - Boundary: Start single-client-first. Multi-client support remains `UNVERIFIED` and requires separate opt-in approval. The protocol authorizes no OSC/UDP send, application or setting change, automatic reconnect, or Phase 2F body-motion execution.
 
+### D-028 — Separate controlled input semantics from VRChat acceptance
+
+- Date: 2026-09-05
+- Decision: Phase 2F-A may validate known-motion semantics only after Phase 2E PASS, under its own explicit authorization and Safe Point. A Phase 2F-A PASS covers the controlled ReboCap-to-memory value path only; VRChat/FBT/avatar acceptance remains a later separately authorized gate.
+- Why: Known input motion can test coordinate signs and transformation invariants without exposing an active VR session, while it cannot prove final avatar IK or tracker quality.
+- Boundary: Use one single-client aggregate-only run of at most 60 seconds, no reconnect or OSC/VR contact, and do not infer sensor ownership, independent degrees of freedom, shoulder-tracker presence, anatomical correctness, or product suitability.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.

@@ -75,6 +75,12 @@ Collar, Shoulder, Elbow, Wrist, and Hand rotations are always represented in the
 - Multiple simultaneous external SDK clients. The GUI must be running because it provides the broadcast, but multi-client support is not explicitly documented.
 - The observable difference between physical shoulder trackers present and absent.
 
+### Controlled-motion semantics gate
+
+Phase 2F-A remains `NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER` and is defined in [`CONTROLLED_MOTION_VALIDATION_PROTOCOL.md`](CONTROLLED_MOTION_VALIDATION_PROTOCOL.md). It follows Phase 2E PASS under a separate explicit authorization and one newly confirmed Safe Point. The single-client run may observe known, user-selected motions for at most 60 seconds, stops new cues at 45 seconds, keeps aggregate evidence only, and ends at OSC representation encode/decode in memory with no OSC/UDP/direct socket send or VR contact.
+
+Its thresholds are declared from neutral-baseline noise before cues, with any absolute floor serving only as a conservative detectable-response floor. Fixed displacement or angle is not correctness evidence. Weak, below-threshold, or response-ambiguous data remains `UNVERIFIED`; an unambiguous detectable contradiction or deterministic invariant violation is `FAIL`, without attributing fault to the SDK. Correlated motion does not prove sensor ownership, independent degrees of freedom, physical shoulder-tracker presence, anatomical correctness, or product suitability. Phase 2F-A PASS validates only the controlled ReboCap value path and does not authorize or satisfy VRChat acceptance.
+
 ## 2. SteamVR Native Output Controller
 
 ### Confirmed installed surface
