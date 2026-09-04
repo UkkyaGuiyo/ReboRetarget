@@ -162,6 +162,20 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Why: A physical tracker is mounted on a body surface or segment, not necessarily at a joint origin, and future calibration must be able to replace the initial placements without changing FK.
 - Boundary: Phase 2C offsets are synthetic fixtures only. They are not product defaults or claims about the user's avatar, and no Euler, OSC packet, UDP sender, or live tracker is included.
 
+### D-025 — Convert Quaternion to VRChat Euler only at the output boundary
+
+- Date: 2026-09-05
+- Decision: Keep Target Skeleton and semantic tracker rotations as Hamilton `(w,x,y,z)` active Quaternions. At the VRChat representation boundary only, convert to degree Euler values for fixed-world-axis `Z -> X -> Y` application; reconstruct the same rotation as `qY * qX * qZ` when validating.
+- Why: Euler triples are non-unique and singular near X = +/-90 degrees. Rotation-equivalent Quaternion/matrix round trips prove the interface meaning without contaminating FK or treating one Euler triple as uniquely correct.
+- Boundary: The output uses a deterministic finite branch but does not promise component-wise Euler continuity. No sender, scheduler, socket, or live input is part of this decision.
+
+### D-026 — Keep body slots, head alignment, tracking-space alignment, and calibration separate
+
+- Date: 2026-09-05
+- Decision: Treat numbered body slots as configurable transport data, keep VRChat's fixed `head` alignment addresses outside the eight-role mapping, and model the local Source-to-VRChat tracking-space transform as one pure yaw-plus-translation rigid transform.
+- Why: VRChat does not define numbered slots as semantic roles, head alignment is not a ninth body tracker, and one generic "calibration" concept would obscure different ownership and timing semantics.
+- Boundary: ReboCap action calibration, VRChat FBT calibration, OSC head alignment, SteamVR playspace, and any future ReboRetarget recenter remain distinct. Phase 2D implements no recenter or live calibration behavior.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.

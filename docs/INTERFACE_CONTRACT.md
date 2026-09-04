@@ -1,7 +1,7 @@
 # Interface Contract
 
-Status: **Phase 2C offline interface contract**
-Last updated: 2026-09-04
+Status: **Phase 2D offline interface contract**
+Last updated: 2026-09-05
 
 This document defines the narrow external boundary for the first ReboRetarget proof of concept. It records confirmed behavior separately from requirements and unresolved items. It is not an implementation claim.
 
@@ -103,9 +103,11 @@ Until the switch is proven in a user-authorized A/B session, the minimal Pose Po
 
 ## 3. VRChat OSC Output
 
-### Offline semantic-transform boundary
+### Offline semantic-transform and representation boundary
 
-Phase 2C produces immutable Quaternion tracker transforms for exactly Hip, Chest, both Knees, both Feet, and both Upper Arms. Each is defined by a target joint, local position offset, and local rotation offset. Position uses `joint_position + rotate(joint_rotation, local_position_offset)` and rotation uses `joint_rotation * local_rotation_offset`. The supplied offsets are replaceable synthetic fixtures, not product defaults. Semantic roles remain separate from OSC slot numbers, addresses, Euler conversion, packets, and transport; none of those output concerns is implemented in Phase 2C.
+Phase 2C produces immutable Quaternion tracker transforms for exactly Hip, Chest, both Knees, both Feet, and both Upper Arms. Each is defined by a target joint, local position offset, and local rotation offset. Position uses `joint_position + rotate(joint_rotation, local_position_offset)` and rotation uses `joint_rotation * local_rotation_offset`. The supplied offsets are replaceable synthetic fixtures, not product defaults.
+
+Phase 2D maps those semantic roles through separate configurable slot data, passes the synthetic metre/Unity-axis positions unchanged, converts Quaternion to the current VRChat Euler convention only at the representation boundary, and encodes/decodes the required OSC message subset in memory. `reboretarget/vrchat_osc.py` has no socket, sender, network, process, filesystem, clock, or live-SDK access.
 
 ### Confirmed wire contract
 
@@ -114,11 +116,11 @@ Phase 2C produces immutable Quaternion tracker transforms for exactly Hip, Chest
 - Body addresses: `/tracking/trackers/{1..8}/position` and `/tracking/trackers/{1..8}/rotation`.
 - Optional alignment addresses: `/tracking/trackers/head/position` and `/tracking/trackers/head/rotation`.
 - Each message contains three floats `(X, Y, Z)`.
-- Positions are world-space Unity coordinates, left-handed, `+Y` up, with `1.0` equal to one metre.
-- Rotations are Euler angles in degrees. VRChat applies them internally in `Z, X, Y` order.
+- Positions are world-space Unity coordinates, left-handed, `+X` right, `+Y` up, `+Z` forward, with `1.0` equal to one metre.
+- Rotations are Euler angles in degrees. VRChat applies fixed-world-axis rotations in `Z, X, Y` order; in the repository's Hamilton active convention the equivalent reconstruction is `qY * qX * qZ`.
 - VRChat supports at most eight additional points: hip, chest, two feet, two knees, and two elbow/upper-arm points.
 
-### Proposed deterministic sender slots
+### Implemented deterministic representation slots
 
 | Slot | ReboRetarget semantic point |
 |---:|---|
@@ -131,20 +133,22 @@ Phase 2C produces immutable Quaternion tracker transforms for exactly Hip, Chest
 | 7 | Left Upper Arm / elbow control point |
 | 8 | Right Upper Arm / elbow control point |
 
-VRChat's OSC addresses are numbered rather than role-named. This table is ReboRetarget's stable internal ordering, not a claim that VRChat binds role by slot number. Role interpretation and body alignment are established by spatial arrangement and the VRChat FBT calibration flow.
+VRChat's OSC addresses are numbered rather than role-named. This table is ReboRetarget's default internal transport ordering, held as validated replaceable data, not a claim that VRChat binds role by slot number. All eight semantic roles and slots 1 through 8 must occur exactly once. Role interpretation and body alignment are established by spatial arrangement and the VRChat FBT calibration flow.
 
 ### Alignment and calibration
 
 - The user must enable OSC and perform VRChat `Calibrate FBT` on the actual avatar.
 - A tracker worn/placed above the elbow controls elbow and shoulder together in VRChat.
-- Optional head position shifts OSC tracking space to the avatar head-bone root every frame without smoothing.
+- Optional head position shifts OSC tracking space to the avatar head-bone root rather than the eye position. Current documentation describes continuous position alignment without smoothing, and the 2026.1.2 release notes add an immediate one-pulse position snap.
 - Optional head rotation controls yaw. A single message is an instant alignment; a second within 300 ms changes it to streamed mode with lerp and a 10-second timeout.
-- The first PoC must compare explicit head-reference alignment with VRChat's current manual/auto-centering flow. It must not silently stream a head reference before axes and origin are validated.
+- The official sources do not assign the head-rotation 300 ms/10-second thresholds to head position. Sender timing and single-shot/stream selection remain future behavior rather than packet fields and must not be inferred across the two endpoints.
+- A future live-output PoC must compare explicit head-reference alignment with VRChat's current manual/auto-centering flow. It must not silently stream a head reference before axes and origin are validated.
 
 ### Conversion and freshness requirements
 
-- Treat ReboCap `UnityCoordinate` as the starting convention, but verify each axis and handedness with known motion. The pelvis/root origin still needs an explicit session alignment transform.
-- Convert solved global tracker quaternions to the exact Euler representation consumed by VRChat; do not send quaternion components as Euler angles.
+- Treat ReboCap `UnityCoordinate` as the starting convention, but verify each live axis and handedness with known motion. The pelvis/root origin still needs an explicit session alignment transform. Phase 2D adds no output-layer inversion or scale to its already-Unity-labelled synthetic positions.
+- Phase 2D keeps solved tracker rotations as Quaternion until the output boundary and converts to degree Euler for fixed `Z -> X -> Y` application. Tests reconstruct the Quaternion and compare rotation equivalence rather than Euler components; singular branches may be discontinuous while remaining finite and equivalent.
+- The offline Source-to-VRChat tracking-space alignment is a separate rigid transform: `position' = yaw * position + translation`, `rotation' = yaw * rotation`. It applies uniformly to all eight points and is not a recenter implementation.
 - Send at most one update per newly accepted source pose and never replay stale frames. The initial rate ceiling is the 60 Hz source cadence; VRChat documents no required tracker rate, so actual loss/jitter must be measured.
 - If input is stale, invalid, or disconnected, stop generating new tracker packets and expose the fault. The final timeout threshold is a PoC measurement, not yet a fixed constant.
 
@@ -160,11 +164,11 @@ Official documentation says OSC trackers should function similarly to SteamVR tr
 
 Virtual Desktop remains the HMD/controller transport into SteamVR. Its optional emulated body trackers use a separate driver/configuration surface and can overlap waist, chest, knees, feet, and elbows. ReboRetarget must identify those devices as external and leave their settings unchanged. Quest chest-yaw work remains the independent OFF/MONITOR-first research track; it is not part of this contract.
 
-## 5. Acceptance Surface for the Next PoC
+## 5. Phase 2D Acceptance and Next Safety Gate
 
-The next PoC remains entirely offline. It is complete when the eight semantic Quaternion transforms are converted into a deterministic VRChat OSC representation: explicit semantic-role-to-slot mapping, metre/Unity-left-handed values, Quaternion-to-degree-Euler conversion matching VRChat's internal Z/X/Y application order, an explicit head-alignment value model, and network-free message encode/decode tests.
+The Phase 2D offline gate is implemented: eight semantic Quaternion transforms become eight deterministic VRChat representation values and sixteen OSC `,fff` messages, then decode successfully in memory. Rotation-equivalent round trips cover the required axes, compounds, singularities, angle boundaries, and `q/-q`. Head alignment is a separate value model; yaw-plus-translation tracking-space alignment preserves body morphology.
 
-Actual UDP/OSC transmission and live SDK reconnection remain separate later gates. Any future live result must be verified in VRChat, not merely by packet construction or upstream registration.
+The next candidate is **Live ReboCap Adapter Safety Validation** without VRChat OSC output: establish SDK single/multi-client conditions, the live delta adapter boundary, latest-pose behavior near 60 Hz, and disconnect handling under a separately authorized safety procedure. Actual UDP/OSC transmission, VRChat startup, or interaction with SteamVR/Virtual Desktop/Quest remain later gates. Any future output result must be verified in VRChat, not merely by packet construction or upstream registration.
 
 ## 6. Sources
 
@@ -177,4 +181,9 @@ Actual UDP/OSC transmission and live SDK reconnection remain separate later gate
 - VRChat OSC trackers: <https://docs.vrchat.com/docs/osc-trackers>
 - VRChat OSC ports: <https://docs.vrchat.com/docs/osc-overview>
 - VRChat full-body tracking: <https://docs.vrchat.com/docs/full-body-tracking>
+- VRChat IK 2.0 features and options: <https://docs.vrchat.com/docs/ik-20-features-and-options>
+- VRChat 2026.1.2 release notes: <https://docs.vrchat.com/docs/vrchat-202612>
+- Unity rotation conventions: <https://docs.unity3d.com/6000.0/Documentation/Manual/QuaternionAndEulerRotationsInUnity.html>
+- Unity `Quaternion.Euler`: <https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Quaternion.Euler.html>
+- OSC 1.0 specification: <https://opensoundcontrol.stanford.edu/spec-1_0.html>
 - OpenVR driver/tracker roles: <https://github.com/ValveSoftware/openvr/blob/master/docs/Driver_API_Documentation.md>

@@ -1,20 +1,20 @@
 # Current State
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 ## Current checkpoint
 
-Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C pure-offline gates are complete. Phase 2C converts official-SDK-shaped T-pose-relative Quaternion deltas into canonical source globals and derives eight semantic tracker transforms from Target Skeleton world transforms. It has no external I/O and the combined suite passes 61 numeric tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
+Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. It has no external I/O and the combined suite passes 83 tests. The earlier live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
 
 ## Actual implementation state
 
-**No live or user-facing ReboRetarget application exists.** The repository contains a small pure/offline FK core, a separate ReboCap-delta value adapter, an eight-role semantic tracker-anchor builder, confirmed hierarchy metadata, in-memory synthetic fixtures/tests, documentation, and the isolated research-only aggregate Pose Inspector. None is connected to ReboCap, VRChat, SteamVR, Virtual Desktop, Quest, OSC, or a GUI.
+**No live or user-facing ReboRetarget application exists.** The repository contains a small pure/offline FK core, a separate ReboCap-delta value adapter, an eight-role semantic tracker-anchor builder, a network-free VRChat OSC representation/codec layer, confirmed hierarchy metadata, in-memory synthetic fixtures/tests, documentation, and the isolated research-only aggregate Pose Inspector. None is connected to ReboCap, VRChat, SteamVR, Virtual Desktop, Quest, or a GUI; the OSC codec only transforms values to and from bytes in memory.
 
 Not implemented:
 
 - Product ReboCap SDK/API connection or live skeleton ingestion. The pure adapter accepts already-constructed values only; a non-product research inspector exists under `research/` but is not used by the FK core.
 - IK, foot locking/contact, smoothing, confidence weighting, or a production retargeting pipeline. Only pure rotation-delta transfer and FK exist.
-- VRChat OSC slot mapping, Euler conversion, packet encoding, UDP transport, or actual tracker output.
+- UDP transport, OSC transmission, timing/scheduling, or actual tracker output. Offline slot mapping, Euler conversion, and minimal packet encoding/decoding are implemented.
 - GUI, ReboCap-attached window, profiles, or persistence code.
 - ReboCap watcher, automatic startup/shutdown, crash recovery, or setting restoration.
 - SteamVR output control or UI automation.
@@ -52,6 +52,13 @@ Not implemented:
 - `reboretarget/tracker_anchors.py` generates exactly eight immutable Hip, Chest, Knee, Foot, and Upper Arm semantic transforms from Target Pose joints plus replaceable local position/rotation offsets. It contains no OSC address or slot.
 - Identity, long/short legs, knee bend, root translation, body yaw, Shoulder Width, fixture Hip Width, mirror symmetry, noncommuting rotation offset, validation, and full SDK-delta-to-Target-to-eight-anchor integration are covered by 17 new tests. Together with the original 44, all 61 tests pass on Python 3.10, 3.11, and 3.13.
 - The synthetic Upper Arm anchor uses the midpoint of Shoulder-to-Elbow; Foot uses the midpoint of the Target Ankle-to-Foot rest vector from Ankle; Chest uses Spine3 plus an offset. These are test fixtures, not product defaults.
+- `reboretarget/vrchat_osc.py` keeps semantic roles separate from replaceable slot mappings and validates all eight roles and slots exactly once. The default internal order is Hip, Chest, both Knees, both Feet, and both Upper Arms in slots 1 through 8; it is not a VRChat role definition.
+- Target positions pass through unchanged as metre-valued Unity-axis coordinates at this boundary. Installed live ReboCap axis signs and origin remain unverified, so this is a synthetic/offline result rather than a live coordinate proof.
+- Tracker Quaternion conversion uses degree Euler values for fixed-world-axis `Z -> X -> Y` application. Reconstruction is `qY * qX * qZ`; identity, single-axis, compound, 89.9/90/90.1-degree, 179/180/181/-179-degree, and `q/-q` round trips are finite and rotation-equivalent.
+- The minimal OSC 1.0 codec supports only the required address, exact `,fff` type tag, NUL termination, four-byte alignment, and three big-endian float32 values. Strict in-memory decode rejects malformed padding, tags, lengths, addresses, and non-finite values.
+- One Phase 2C synthetic pipeline produces eight slot poses and sixteen unique position/rotation messages, all decoded in memory. No socket or network sender exists.
+- Head position/rotation values use separate fixed addresses and never enter the eight body slots. A separate yaw-plus-translation rigid transform applies uniformly to all eight trackers and preserves pairwise distance and relative rotation; no recenter is implemented.
+- Phase 2D adds 22 tests to the prior 61 for 83 passing standard-library tests on Python 3.10, 3.11, and 3.13.
 
 ## Verified repository facts
 
@@ -63,12 +70,12 @@ Not implemented:
 
 ## Go / No-Go
 
-- **GO:** the next minimal offline gate: convert the eight semantic Quaternion transforms into a VRChat OSC representation with explicit slot mapping, metre/Unity-left-handed values, Euler convention, head-alignment value model, and network-free encode/decode tests.
-- **NO-GO:** live SDK reconnection, OSC output, Two Bone IK, production retargeting, Watcher integration, chest-yaw correction, and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
+- **CONDITIONAL GO:** design the next Live ReboCap Adapter Safety Validation as a separate, explicitly authorized procedure covering SDK single/multi-client conditions, live delta adaptation, latest-pose behavior near 60 Hz, and disconnect invalidation, while still sending no VRChat OSC.
+- **NO-GO:** starting that live procedure without a safe point and explicit authorization; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
 
 ## Single recommended next task
 
-Create the smallest pure/offline semantic-tracker-to-VRChat-representation PoC. Define semantic role-to-slot mapping, convert Quaternion rotation into VRChat's degree Euler convention, preserve metre/Unity-left-handed values, make head-alignment values explicit, and test OSC message encode/decode without opening a socket. Do not add UDP transport, live SDK access, IK, VR application access, or personal raw motion.
+Design the smallest separate Phase 2E Live ReboCap Adapter Safety Validation procedure. It must resolve SDK single/multi-client conditions and protect an active VR session before any connection is attempted; then validate live delta adaptation, latest-pose behavior near 60 Hz, and disconnect invalidation without sending VRChat OSC. Do not start or touch ReboCap, VRChat, SteamVR, Virtual Desktop, or Quest until the user explicitly authorizes a safe point.
 
 Use the priority order in D-011. If a live VR session is active, use quiet/read-only inspection and do not foreground, restart, stop, reset, or change ReboCap/SteamVR/VRChat/Virtual Desktop/Quest state without explicit authorization.
 
@@ -81,6 +88,7 @@ Use the priority order in D-011. If a live VR session is active, use quiet/read-
 - Receive gaps/bursts and six backlog candidates require latest-Pose semantics. Their exact SDK-versus-client scheduling origin remains unresolved.
 - External disconnect/reconnect and stale-frame recovery were not exercised; the recorded disconnect was Inspector shutdown.
 - VRChat OSC behavior has been verified from current official documentation, but not yet on the user's actual VRChat avatar/environment.
+- Current release notes add a single-pulse head-position snap, while the main tracker page does not specify head-position streaming thresholds. Do not apply the documented head-rotation 300 ms/10-second rules to head position by inference.
 - Duplicate-role precedence between native SteamVR and OSC sources is not documented sufficiently to rely on.
 - Python 3.10, 3.11, and 3.13 plus the standard library are proven for the offline test suite; the product technology stack and MVP/v1 boundary are not selected.
 - The official hierarchy and offline T-pose-delta adapter are implemented, but known-action live axes and safe live SDK ingestion remain unverified.
@@ -97,5 +105,6 @@ Use the priority order in D-011. If a live VR session is active, use quiet/read-
 - Phase 1.5 research commit: `35b3308`.
 - Phase 2A commit `1731c9d` is published on `origin/main`.
 - Phase 2B commit `54c6dc7` is published on `origin/main`.
-- Phase 2C source, synthetic tests, and documentation are pending Scope Guard review and a separate commit at this handoff.
+- Phase 2C commit `07d525b` is published on `origin/main`.
+- Phase 2D source, synthetic tests, and documentation are pending Scope Guard review and a separate commit at this handoff.
 - Deployment: none.

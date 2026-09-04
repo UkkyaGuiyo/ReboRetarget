@@ -235,3 +235,27 @@ Do not paste secrets, personal data, device identifiers, proprietary binaries/co
 - Foot-anchor choice: use `L/R_Ankle` as parent and half the Target `Ankle -> Foot` rest vector as the local position offset. This locates the anchor on the target chain without assuming an independently trustworthy Foot rotation, which the earlier duplicate Ankle/Foot live statistics did not prove. It is a replaceable synthetic fixture, not a product default.
 - Result: Phase 2C pure/offline acceptance passes. Arm Length and UpperArm/Forearm Balance remain deliberately deferred; no slot mapping, Euler conversion, packet encoder, UDP/OSC sender, live SDK connection, tracker device, IK, lock, GUI, or VR process access was added.
 - Consequence: proceed only to the pure/offline VRChat OSC representation gate. Live input and output remain separate No-Go gates.
+
+## 2026-09-05 — Phase 2D current VRChat OSC representation verification
+
+- Question: Can the eight Phase 2C Quaternion tracker transforms be represented exactly as current VRChat OSC tracker values and OSC 1.0 messages without opening a socket or contacting a live system?
+- Primary sources checked:
+  - VRChat OSC Trackers: <https://docs.vrchat.com/docs/osc-trackers>
+  - VRChat Full-Body Tracking: <https://docs.vrchat.com/docs/full-body-tracking>
+  - VRChat IK 2.0 Features and Options: <https://docs.vrchat.com/docs/ik-20-features-and-options>
+  - VRChat OSC Overview: <https://docs.vrchat.com/docs/osc-overview>
+  - VRChat 2026.1.2 release notes: <https://docs.vrchat.com/docs/vrchat-202612>
+  - Unity rotation and coordinate documentation: <https://docs.unity3d.com/6000.0/Documentation/Manual/QuaternionAndEulerRotationsInUnity.html> and <https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Quaternion.Euler.html>
+  - OSC 1.0 specification: <https://opensoundcontrol.stanford.edu/spec-1_0.html>
+- Confirmed interface:
+  - Body endpoints are `/tracking/trackers/{1..8}/position` and `/tracking/trackers/{1..8}/rotation`, with three floats. The numbers are transport slots; the current official documentation does not assign a fixed semantic role to each number.
+  - Position is world-space Unity coordinates, left-handed, `+Y` up, with one unit equal to one metre. The Phase 2C synthetic Target space already uses those axis labels and metres, so Phase 2D performs no scale or axis inversion. This does not prove installed live ReboCap signs or origin.
+  - Rotation is Euler degrees and VRChat applies fixed-world-axis rotations in `Z -> X -> Y` order. Under the repository's Hamilton active convention, reconstruction is `qY * qX * qZ`.
+  - Head position and rotation use the fixed `/tracking/trackers/head/...` endpoints and are not a ninth body slot. Head position aligns OSC tracking space to the avatar head-bone root; head rotation controls yaw alignment.
+  - The rotation stream rule is explicit: one head-rotation message is an immediate alignment; a second within 300 ms enters streamed mode; a ten-second gap leaves that mode. The 2026.1.2 release notes add an immediate single-pulse head-position snap. The main tracker page still describes continuously supplied head position without documenting a position-side 300 ms threshold or ten-second timeout, so rotation timing must not be copied onto position by inference.
+  - VRChat consumes OSC trackers through its existing calibrated FBT behavior, similarly to SteamVR trackers. The user still performs `Calibrate FBT`; duplicate native-plus-OSC role precedence remains unspecified.
+- Implemented evidence: `reboretarget/vrchat_osc.py` and 22 Phase 2D `unittest` cases. The converter keeps Quaternion until the output boundary, extracts a deterministic finite Euler branch, and validates rotation equivalence by reconstructing `qY * qX * qZ`. Required axis, compound, +/-90-degree, 179/180/181-degree, and `q/-q` cases pass. An additional fixed-seed 100,000-rotation stress check had zero failures and maximum `1-abs(dot)` error `4.441e-16`. The minimal OSC codec handles NUL termination, four-byte padding, exact `,fff`, and big-endian float32, then decodes only in memory.
+- Alignment evidence: a separate yaw-plus-translation rigid transform applied to all eight trackers preserves every pairwise distance and relative rotation. Head-alignment values are represented separately and never enter the body role-to-slot map. Recenter is not implemented.
+- Result: 61 previous tests plus 22 Phase 2D tests pass on Python 3.10, 3.11, and 3.13, for 83 total. The synthetic Phase 2C-to-2D path yields eight poses, sixteen unique position/rotation messages, and sixteen successful offline decodes.
+- Boundaries: no UDP sender, socket import, OSC transmission, timing loop, process detection, live SDK, ReboCap/VRChat/SteamVR/Virtual Desktop/Quest access, tracker device, IK, lock, GUI, or recenter was added or exercised.
+- Consequence: Phase 2D's representation gate passes. The next candidate is a separately designed Live ReboCap Adapter Safety Validation with no VRChat OSC transmission; Phase 2D alone does not authorize live connection or UDP output.
