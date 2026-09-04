@@ -139,7 +139,7 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Decision: For the offline FK core, recover each source local rotation as `inverse(parent_global) * child_global`, remove the source rest-local rotation, apply the resulting motion delta after the target rest-local rotation, and run FK using only target rest-local vectors.
 - Convention: Hamilton `(w,x,y,z)` active rotations; `left * right` applies `right` first and then `left`. Quaternion sign is not identity: `q` and `-q` are treated as the same rotation.
 - Why: This preserves joint posture while allowing source and target bone lengths and rest rotations to differ. It also keeps a straight source knee straight instead of solving the target foot back to the source position.
-- Boundary: Phase 2A proves this with synthetic coordinates only. Phase 2B confirms the 24-joint parent array from the official Unity SDK v4 and Unreal Engine plugin v2. The SDK's global rotations are T-pose-relative deltas, so a future adapter must explicitly compose that convention; installed ReboCap axis signs still require a separately authorized evidence gate before live use.
+- Boundary: Phase 2A proves this with synthetic coordinates only. Phase 2B confirms the 24-joint parent array from the official Unity SDK v4 and Unreal Engine plugin v2. Phase 2C implements the T-pose-delta composition as a pure offline adapter; installed ReboCap axis signs and live connection still require a separately authorized evidence gate before use.
 
 ### D-022 — Give leg controls total-length and fixed-total balance semantics
 
@@ -147,6 +147,20 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Decision: `Leg Length` scales total thigh-plus-calf length. `Thigh / Calf Balance` shifts the thigh's share of that already-scaled total and transfers the same amount from the calf, preserving total length.
 - Why: `Leg Length = 1.10` therefore means exactly 10% more total leg length, while Balance moves the target knee without also changing overall leg reach.
 - Boundary: This is the initial synthetic-core meaning. User-facing ranges and avatar-specific defaults remain future work.
+
+### D-023 — Adapt ReboCap T-pose deltas before the source-agnostic FK core
+
+- Date: 2026-09-04
+- Decision: Treat each official-SDK global Quaternion as a T-pose-relative delta and form the canonical source absolute rotation as `sdk_rotation_delta * source_bind_global_rotation` using the existing Hamilton `(w,x,y,z)` convention.
+- Why: This matches the official Unity SDK v4 and Unreal Engine plugin v2 integration order and prevents a non-identity bind pose from being mistaken for identity world orientation.
+- Boundary: The adapter is pure/offline and validates the confirmed 24-joint hierarchy. It does not connect to the SDK, resolve live axes, or modify the source-agnostic FK core.
+
+### D-024 — Represent tracker placement as replaceable semantic local anchors
+
+- Date: 2026-09-04
+- Decision: Derive Hip, Chest, both Knees, both Feet, and both Upper Arms from a Target joint plus explicit local position and rotation offsets. Keep the semantic role independent from OSC slot/address assignment.
+- Why: A physical tracker is mounted on a body surface or segment, not necessarily at a joint origin, and future calibration must be able to replace the initial placements without changing FK.
+- Boundary: Phase 2C offsets are synthetic fixtures only. They are not product defaults or claims about the user's avatar, and no Euler, OSC packet, UDP sender, or live tracker is included.
 
 ## Open decisions
 

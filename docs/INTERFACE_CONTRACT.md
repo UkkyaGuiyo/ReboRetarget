@@ -1,6 +1,6 @@
 # Interface Contract
 
-Status: **Phase 2B offline interface contract**
+Status: **Phase 2C offline interface contract**
 Last updated: 2026-09-04
 
 This document defines the narrow external boundary for the first ReboRetarget proof of concept. It records confirmed behavior separately from requirements and unresolved items. It is not an implementation claim.
@@ -52,7 +52,7 @@ The confirmed 24-joint SMPL-style order is:
 
 The hierarchy is confirmed from two official code distributions: ReboCap Unity SDK v4 and ReboCap Unreal Engine plugin source v2. Both encode pelvis-rooted legs, `Pelvis -> Spine1 -> Spine2 -> Spine3 -> Neck -> Head`, and `Spine3 -> Collar -> Shoulder -> Elbow -> Wrist -> Hand` on each side. Unity uses `-1` for the root parent, while Unreal uses self index `0`; ReboRetarget normalizes the Pelvis parent to `None`. The complete normalized parent-index array is `(-1,0,0,0,1,2,3,4,5,6,7,8,9,9,9,12,13,14,16,17,18,19,20,21)`.
 
-The SDK documentation states that all output rotations are relative to T-pose. Official Unity and Unreal integration code composes each received ReboCap Quaternion with a bind/T-pose global rotation. Therefore the SDK's global values must not be treated as already-composed absolute bind rotations. The offline core can represent the required values, but a production/live T-pose-delta adapter is not implemented.
+The SDK documentation states that all output rotations are relative to T-pose. Official Unity and Unreal integration code composes each received ReboCap Quaternion with a bind/T-pose global rotation. Therefore the SDK's global values must not be treated as already-composed absolute bind rotations. Phase 2C implements the pure/offline boundary as `source_absolute_global = sdk_rotation_delta * source_bind_global_rotation`, while the production/live SDK client remains unimplemented.
 
 ### Shoulder tracker boundary
 
@@ -69,7 +69,7 @@ Collar, Shoulder, Elbow, Wrist, and Hand rotations are always represented in the
 
 ### Still unverified live
 
-- Known-action axis signs and the live T-pose-delta adapter.
+- Known-action axis signs and connection of the offline T-pose-delta adapter to live SDK values.
 - Multiple simultaneous external SDK clients. The GUI must be running because it provides the broadcast, but multi-client support is not explicitly documented.
 - The observable difference between physical shoulder trackers present and absent.
 
@@ -102,6 +102,10 @@ The installed `config.data` is a custom/pickle-derived binary store containing t
 Until the switch is proven in a user-authorized A/B session, the minimal Pose PoC must not edit `config.data`, call undocumented IPC, or manipulate ReboCap UI. Any VRChat output test must use an explicitly confirmed manual native-output-OFF state or run without a conflicting live SteamVR/VRChat path.
 
 ## 3. VRChat OSC Output
+
+### Offline semantic-transform boundary
+
+Phase 2C produces immutable Quaternion tracker transforms for exactly Hip, Chest, both Knees, both Feet, and both Upper Arms. Each is defined by a target joint, local position offset, and local rotation offset. Position uses `joint_position + rotate(joint_rotation, local_position_offset)` and rotation uses `joint_rotation * local_rotation_offset`. The supplied offsets are replaceable synthetic fixtures, not product defaults. Semantic roles remain separate from OSC slot numbers, addresses, Euler conversion, packets, and transport; none of those output concerns is implemented in Phase 2C.
 
 ### Confirmed wire contract
 
@@ -158,9 +162,9 @@ Virtual Desktop remains the HMD/controller transport into SteamVR. Its optional 
 
 ## 5. Acceptance Surface for the Next PoC
 
-The next PoC remains entirely offline. It is complete when deterministic Target Skeleton world transforms are converted into the planned Hip, Chest, both Knee, both Foot, and both Upper Arm tracker transforms using synthetic fixtures only. It must define offsets and orientations explicitly, preserve left/right symmetry, and add no network, OSC sender, live SDK adapter, IK, GUI, watcher, or SteamVR control.
+The next PoC remains entirely offline. It is complete when the eight semantic Quaternion transforms are converted into a deterministic VRChat OSC representation: explicit semantic-role-to-slot mapping, metre/Unity-left-handed values, Quaternion-to-degree-Euler conversion matching VRChat's internal Z/X/Y application order, an explicit head-alignment value model, and network-free message encode/decode tests.
 
-Actual OSC transmission and live SDK reconnection remain separate later gates. Any future live result must be verified in VRChat, not merely by packet construction or upstream registration.
+Actual UDP/OSC transmission and live SDK reconnection remain separate later gates. Any future live result must be verified in VRChat, not merely by packet construction or upstream registration.
 
 ## 6. Sources
 

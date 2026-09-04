@@ -222,3 +222,16 @@ Do not paste secrets, personal data, device identifiers, proprietary binaries/co
   - A five-frame Spine3/Collar/Shoulder/Elbow sequence preserves incremental local rotations and parent propagation. A fixture-only Shoulder Width scale of 1.10 expands the rest shoulder span from 0.40 m to 0.44 m without changing the 0.28 m upper-arm or 0.25 m forearm lengths.
 - Result: Phase 2B offline acceptance passes. Product Arm Length, interpolation, IK, contact locking, and tracker/OSC output were not implemented.
 - Consequence: the next smallest gate is pure/offline conversion from Target Skeleton world transforms to the planned tracker transforms. Live SDK connection and OSC transmission remain No-Go.
+
+## 2026-09-04 — Phase 2C ReboCap delta adapter and semantic tracker anchors
+
+- Question: Can official ReboCap T-pose-relative Quaternion semantics be adapted before the source-agnostic FK core, then used to place the planned eight semantic trackers on a Target Skeleton without any live or network integration?
+- Evidence: official ReboCap SDK documentation; Unity SDK v4 `SdkManager.cs:385-389,432-433`; Unreal Engine plugin v2 `rebocap_pose_node.cpp:282-308`; `reboretarget/rebocap_adapter.py`; `reboretarget/tracker_anchors.py`; and 61 standard-library `unittest` cases summarized in `OFFLINE_TRACKER_ANCHOR_REPORT.md`.
+- Confirmed observations:
+  - The pure adapter computes each canonical absolute source global as `sdk_rotation_delta * source_bind_global_rotation`. Identity/non-identity bind and delta cases, a noncommuting order check, a parent-bind plus child-motion case, 24-item validation, hierarchy validation, and exact root-translation passthrough pass synthetically.
+  - The FK core remains ReboCap-agnostic. The adapter contains no SDK client, process, network, filesystem, or clock access.
+  - Exactly eight immutable semantic transforms are produced from `joint + local offsets`. Synthetic tests cover identity, long/short legs, knee bend, root translation, body yaw, Shoulder Width, Hip Width, mirror symmetry, noncommuting rotation offset, definition validation, and full delta-to-Target-to-anchor integration.
+  - Fixture-only Shoulder Width `1.00 -> 1.10` increases Upper Arm anchor span from `0.68 m` to `0.72 m`. Fixture Hip Width `0.20 m -> 0.24 m` shifts each side's Knee/Foot anchor outward by `0.02 m` without moving central or Upper Arm anchors.
+- Foot-anchor choice: use `L/R_Ankle` as parent and half the Target `Ankle -> Foot` rest vector as the local position offset. This locates the anchor on the target chain without assuming an independently trustworthy Foot rotation, which the earlier duplicate Ankle/Foot live statistics did not prove. It is a replaceable synthetic fixture, not a product default.
+- Result: Phase 2C pure/offline acceptance passes. Arm Length and UpperArm/Forearm Balance remain deliberately deferred; no slot mapping, Euler conversion, packet encoder, UDP/OSC sender, live SDK connection, tracker device, IK, lock, GUI, or VR process access was added.
+- Consequence: proceed only to the pure/offline VRChat OSC representation gate. Live input and output remain separate No-Go gates.

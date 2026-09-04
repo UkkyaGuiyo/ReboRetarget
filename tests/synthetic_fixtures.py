@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import math
 from typing import Mapping, Sequence, Tuple
 
@@ -23,6 +24,7 @@ def synthetic_human_skeleton(
     lower_leg: float = 0.43,
     hip_width: float = 0.20,
     shoulder_width_scale: float = 1.0,
+    rest_local_rotation_overrides: Mapping[str, Quaternion] | None = None,
 ) -> SkeletonDefinition:
     """Return a simple T-pose skeleton in confirmed ReboCap joint order."""
 
@@ -73,6 +75,22 @@ def synthetic_human_skeleton(
             JointDefinition("R_Hand", "R_Wrist", (0.10, 0.0, 0.0), identity),
         )
     )
+    rotation_overrides = rest_local_rotation_overrides or {}
+    unknown = set(rotation_overrides) - set(skeleton.joint_names)
+    if unknown:
+        raise ValueError(f"unknown rest rotation joints: {sorted(unknown)!r}")
+    if rotation_overrides:
+        skeleton = SkeletonDefinition(
+            tuple(
+                replace(
+                    joint,
+                    rest_local_rotation=rotation_overrides.get(
+                        joint.name, joint.rest_local_rotation
+                    ),
+                )
+                for joint in skeleton.joints
+            )
+        )
     validate_rebocap24_skeleton(skeleton)
     if tuple(joint.parent for joint in skeleton.joints) != REBOCAP_24_PARENT_NAMES:
         raise AssertionError("synthetic fixture hierarchy does not match its definition")
