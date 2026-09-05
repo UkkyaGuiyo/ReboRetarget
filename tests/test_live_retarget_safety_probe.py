@@ -16,6 +16,7 @@ from research.live_retarget_safety_probe import (
     AbortReason,
     LiveRetargetSafetyProbe,
     ProbeConfig,
+    _Histogram,
     _parse_args,
     execute_probe,
 )
@@ -122,14 +123,17 @@ class TwoPosePerConsumerWait:
     def __init__(self, module: FakeSdkModule, clock: ManualClock) -> None:
         self.module = module
         self.clock = clock
-        self.source_timestamp = 1000.0
+        self.started, self.sequence = clock(), 0
 
     def __call__(self, _event: threading.Event, timeout: float) -> None:
-        for _ in range(2):
-            step = timeout * 0.5
-            self.clock.advance(step)
-            self.source_timestamp += step
-            self.module.instance.emit_pose(timestamp=self.source_timestamp)
+        # The producer's 60 Hz clock is independent of consumer wait length.
+        # A short deadline remainder must not fabricate simultaneous callbacks.
+        target = self.clock() + timeout
+        while self.started + (self.sequence + 1) / 60 <= target:
+            self.sequence += 1
+            self.clock.advance(self.started + self.sequence / 60 - self.clock())
+            self.module.instance.emit_pose(timestamp=1000.0 + self.sequence / 60)
+        self.clock.advance(target - self.clock())
 
 
 class ProbeConfigAndCliTests(unittest.TestCase):
@@ -342,10 +346,10 @@ class CallbackAbortTests(unittest.TestCase):
         self.assertEqual(source_report["counts"]["source_order_rejections"], 1)
         self.assertFalse(source_report["invalidation"]["latest_sample_present"])
 
-    def test_receive_gap_and_followed_burst_are_counted_without_waking_consumer(self):
+    def test_receive_gap_and_followed_burst_are_counted_with_publish_wake(self):
         probe = self.new_probe()
         probe.on_pose(None, VALID_ROOT, IDENTITY_POSE, -1, 1.0)
-        self.assertFalse(probe.wake.is_set())
+        self.assertTrue(probe.wake.is_set())
         self.clock.advance(0.060)
         probe.on_pose(None, VALID_ROOT, IDENTITY_POSE, -1, 1.060)
         self.clock.advance(0.001)
@@ -485,6 +489,27 @@ class DurationPrivacyAndBoundaryTests(unittest.TestCase):
 
 
 class RecoveryClockAndProgressTests(unittest.TestCase):
+    def test_empty_histogram_does_not_scan_bins_and_preserves_summary(self):
+        histogram = _Histogram(.05, 100.)
+        class NoScan:
+            def __iter__(self):
+                raise AssertionError("empty histogram must not scan bins")
+        histogram.bins = NoScan()
+        self.assertEqual(histogram.summary(), {
+            "count": 0, "mean": None, "min": None, "p50": None,
+            "p95": None, "p99": None, "max": None, "overflow_count": 0,
+        })
+
+    def test_pure_pipeline_budget_is_strictly_less_than_ten_ms(self):
+        for value, rejected in ((9.95, False), (10.0, True), (10.05, True)):
+            with self.subTest(value=value):
+                probe = LiveRetargetSafetyProbe(ProbeConfig())
+                probe.histograms["pure_pipeline"].add(value)
+                self.assertEqual(
+                    "PURE_PIPELINE_P99_BUDGET" in probe.aggregate_result()["acceptance_failed"],
+                    rejected,
+                )
+
     def test_both_default_clocks_are_the_same_high_resolution_clock(self):
         self.assertIs(LiveRetargetSafetyProbe.__init__.__kwdefaults__["clock"], time.perf_counter)
         self.assertIs(execute_probe.__kwdefaults__["clock"], time.perf_counter)

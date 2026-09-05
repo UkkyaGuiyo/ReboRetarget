@@ -30,9 +30,9 @@ from reboretarget import (
     LatestPoseSlot,
     LatestPoseState,
     PublishResult,
+    PreparedReboCapAdapter,
     ReboCapDeltaPose,
     SourcePose,
-    adapt_rebocap_delta_pose,
     build_osc_tracker_poses,
     build_tracker_messages,
     build_tracker_transforms,
@@ -162,6 +162,8 @@ class _Histogram:
             self.bins[min(int(value / self.width), len(self.bins) - 1)] += 1
 
     def percentile(self, fraction: float) -> Optional[float]:
+        if not self.count:
+            return None
         target = max(1, math.ceil(self.count * fraction))
         seen = 0
         for index, amount in enumerate(self.bins):
@@ -189,6 +191,13 @@ class _InputError(Exception):
         self.reason = reason
 
 
+@dataclass(frozen=True, slots=True)
+class _ObservedPose:
+    """Opt-in, coherent capacity-one handoff for controlled-motion research."""
+    delta: ReboCapDeltaPose
+    canonical: SourcePose
+
+
 COUNT_NAMES = (
     "callbacks_received", "callbacks_while_accepting", "late_callbacks_rejected",
     "invalid_callbacks", "delta_pose_created", "canonical_pose_created",
@@ -206,12 +215,16 @@ COUNT_NAMES = (
 class LiveRetargetSafetyProbe:
     """Callback validation, capacity-one handoff, and aggregate evidence."""
 
-    def __init__(self, config: ProbeConfig, *, clock: Clock = time.perf_counter) -> None:
+    def __init__(self, config: ProbeConfig, *, clock: Clock = time.perf_counter,
+                 pose_observer: Optional[Callable[..., None]] = None) -> None:
         self.config, self._clock = config, clock
+        self._pose_observer = pose_observer
+        self._controlled_completion = False
         self._lock, self._callback_lock = threading.Lock(), threading.Lock()
         self.wake = threading.Event()
         self.slot: LatestPoseSlot[SourcePose] = LatestPoseSlot(config.stale_after_seconds)
         self._source = synthetic_human_skeleton()
+        self._prepared_adapter = PreparedReboCapAdapter(self._source)
         self._target = synthetic_human_skeleton(
             upper_leg=0.52, lower_leg=0.50, shoulder_width_scale=1.10
         )
@@ -380,7 +393,7 @@ class LiveRetargetSafetyProbe:
         try:
             delta = ReboCapDeltaPose.from_rebocap24(root, rotations)
             self._inc("delta_pose_created")
-            canonical = adapt_rebocap_delta_pose(delta, self._source)
+            canonical = self._prepared_adapter.adapt(delta)
             self._inc("canonical_pose_created")
         except Exception:
             self._inc("invalid_callbacks")
@@ -390,7 +403,8 @@ class LiveRetargetSafetyProbe:
         self._inc("publish_attempts")
         try:
             result = self.slot.publish(
-                canonical, receive_monotonic=receive, source_timestamp=source
+                (_ObservedPose(delta, canonical) if self._pose_observer is not None else canonical),
+                receive_monotonic=receive, source_timestamp=source
             )
         except ValueError:
             self._abort(AbortReason.INVALID_RECEIVE_TIMESTAMP)
@@ -404,6 +418,7 @@ class LiveRetargetSafetyProbe:
                 if self._first_accepted is None:
                     self._first_accepted = receive
                 self._last_accepted = receive
+            self.wake.set()
             return
         self._inc("publish_rejected")
         self._inc("timestamp_regressions")
@@ -452,7 +467,8 @@ class LiveRetargetSafetyProbe:
         pure_started = self._clock()
         try:
             stage = pure_started
-            target = retarget_pose(sample.value, self._source, self._target)
+            canonical = sample.value.canonical if isinstance(sample.value, _ObservedPose) else sample.value
+            target = retarget_pose(canonical, self._source, self._target)
             now = self._clock()
             self._timing("target_fk", stage, now)
             stage = now
@@ -505,14 +521,21 @@ class LiveRetargetSafetyProbe:
             ):
                 self.counts[name] += 1
             self.counts["decoded_messages"] += decoded_count
+        if self._pose_observer is not None:
+            try:
+                self._pose_observer(sample.sequence, sample.receive_monotonic,
+                                    sample.value.delta, canonical, transforms)
+            except Exception:
+                self._abort(AbortReason.PIPELINE_ERROR)
 
-    def finish_normal_observation(self) -> None:
+    def finish_normal_observation(self, *, controlled_completion: bool = False) -> None:
         with self._callback_lock:
             with self._lock:
                 if self._abort_reason is not AbortReason.NONE:
                     return
                 self._accepting = False
-                self._normal_deadline_reached = True
+                self._normal_deadline_reached = not controlled_completion
+                self._controlled_completion = controlled_completion
             self.slot.mark_stale()
             snapshot = self.slot.snapshot_at(self._clock())
             self.controlled_stale_clear = (
@@ -554,7 +577,7 @@ class LiveRetargetSafetyProbe:
                 self._clock() - self._last_receive if self._last_receive is not None else None
             )
             natural_disconnect = self._natural_disconnect_seen
-            abort, normal = self._abort_reason, self._normal_deadline_reached
+            abort, normal = self._abort_reason, self._normal_deadline_reached or self._controlled_completion
             timing = {name: value.summary() for name, value in self.histograms.items()}
         failed, insufficient = [], []
         if not normal:
@@ -594,7 +617,7 @@ class LiveRetargetSafetyProbe:
         p99 = timing["pure_pipeline"]["p99"]
         if p99 is None:
             insufficient.append("PURE_PIPELINE_P99")
-        elif p99 > self.config.pure_pipeline_p99_budget_ms:
+        elif p99 >= self.config.pure_pipeline_p99_budget_ms:
             failed.append("PURE_PIPELINE_P99_BUDGET")
         if not self.controlled_stale_clear:
             failed.append("CONTROLLED_STALE_CLEAR")
@@ -611,6 +634,7 @@ class LiveRetargetSafetyProbe:
         counts["slot_replacements_total"] = max(0, counts["publish_accepted"] - 1)
         counts["latest_sequence"] = counts["publish_accepted"]
         life.update({
+            "controlled_completion": self._controlled_completion,
             "process_alive_start": self.process_alive_start,
             "process_alive_end": self.process_alive_end,
             "observation_duration_seconds": round(duration, 6) if duration is not None else None,
@@ -706,6 +730,8 @@ def execute_probe(
     process_guard: ProcessGuard = process_alive,
     stop_event: Optional[threading.Event] = None,
     progress: Optional[Progress] = None,
+    pose_observer: Optional[Callable[..., None]] = None,
+    observation_control: Optional[Callable[[float], str]] = None,
 ) -> dict[str, Any]:
     """Open and close once; native-call deadlines require an external supervisor.
 
@@ -713,7 +739,8 @@ def execute_probe(
     progress events contain only fixed labels and aggregate measurements, never
     source timestamps, motion values, SDK diagnostics, or exception text.
     """
-    probe = LiveRetargetSafetyProbe(config, clock=clock)
+    probe = LiveRetargetSafetyProbe(config, clock=clock, pose_observer=pose_observer)
+    controlled_completion = False
     stop, sdk, run_started = stop_event or threading.Event(), None, None
     execution_started = clock()
 
@@ -784,6 +811,7 @@ def execute_probe(
             deadline, period = run_started + config.duration_seconds, 1.0 / config.consumer_hz
             checkpoint("observe_start")
             next_heartbeat = clock() + 1.0
+            next_consumer = clock()
             while probe.abort_reason is AbortReason.NONE:
                 if stop.is_set():
                     probe.request_user_stop()
@@ -803,15 +831,38 @@ def execute_probe(
                     break
                 if now >= deadline:
                     break
+                if observation_control is not None:
+                    try:
+                        action = observation_control(now)
+                        if action not in ("CONTINUE", "COMPLETE", "ABORT"):
+                            raise ValueError
+                    except Exception:
+                        probe._abort(AbortReason.PROGRESS_REPORT_FAILED)
+                        break
+                    if action == "ABORT":
+                        probe.request_user_stop()
+                        break
+                    if action == "COMPLETE":
+                        controlled_completion = True
+                        break
                 if now >= next_heartbeat:
                     checkpoint("heartbeat")
                     next_heartbeat = now + 1.0
+                # Clear before the snapshot: a publish during processing must
+                # remain observable. Early wakes coalesce until the next start
+                # deadline; processing time is part of the configured period.
                 probe.wake.clear()
-                probe.process_latest()
-                remaining = deadline - _finite(clock(), "loop_monotonic")
+                now = _finite(clock(), "loop_monotonic")
+                if now >= next_consumer:
+                    # Preserve the original cadence phase despite late Windows
+                    # wakes. Skip missed deadlines, never replay missed poses.
+                    next_consumer += (math.floor((now - next_consumer) / period) + 1) * period
+                    probe.process_latest()
+                now = _finite(clock(), "loop_monotonic")
+                remaining = deadline - now
                 if probe.abort_reason is not AbortReason.NONE or remaining <= 1e-9:
                     break
-                waiter(probe.wake, min(period, remaining))
+                waiter(probe.wake, min(max(0.0, next_consumer - now), remaining))
             if probe.abort_reason is AbortReason.NONE:
                 try:
                     probe.process_alive_end = bool(process_guard(process_id))
@@ -822,7 +873,7 @@ def execute_probe(
                 else:
                     probe.process_latest()
                     if probe.abort_reason is AbortReason.NONE:
-                        probe.finish_normal_observation()
+                        probe.finish_normal_observation(controlled_completion=controlled_completion)
     finally:
         if sdk is not None:
             checkpoint("pre_close")

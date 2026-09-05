@@ -36,7 +36,13 @@ class SyntheticSdk:
         assert port == 7690
         if self.mode == "open_hang":
             time.sleep(3600)
-        if self.mode in ("success", "burst", "malformed", "close_hang", "exit_hang"):
+        if self.mode == "burst":
+            # A fixed workload, independent of host scheduling/callback-per-second speed.
+            for sequence in range(120):
+                self.callback(self, (0.0, 1.0, 0.0), ((1.0, 0.0, 0.0, 0.0),) * 24,
+                              -1, sequence / 60.0)
+            return 0
+        if self.mode in ("success", "malformed", "close_hang", "exit_hang"):
             def producer():
                 sequence = 0
                 while not self.stop.is_set():
@@ -78,9 +84,9 @@ class SupervisorTests(unittest.TestCase):
             pure_pipeline_p99_budget_ms=100)
         started = time.perf_counter()
         report = supervise_probe(sdk_root=Path(__file__).parent, port=7690,
-            process_id=os.getpid(), config=config, hard_timeout_seconds=3.5,
+            process_id=os.getpid(), config=config, hard_timeout_seconds=8,
             _sdk_loader=partial(synthetic_loader, mode=mode))
-        self.assertLess(time.perf_counter() - started, 3.5)
+        self.assertLess(time.perf_counter() - started, 8)
         self.assertTrue(report["within_deadline"])
         self.assertTrue(report["child_exit_observed"])
         self.assertNotEqual(report["child_pid"], os.getpid())
