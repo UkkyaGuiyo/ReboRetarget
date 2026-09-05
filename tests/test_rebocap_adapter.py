@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
+import math
 import unittest
+from unittest.mock import patch
 
 from reboretarget import (
+    PreparedReboCapAdapter,
     Quaternion,
     ReboCapDeltaPose,
     SkeletonDefinition,
@@ -139,6 +142,74 @@ class ReboCapAdapterTests(unittest.TestCase):
                 (0.0, 1.0, 0.0),
                 (Quaternion.identity(),) * 23,
             )
+
+    def test_prepared_matches_reference_with_noncommuting_binds_and_signs(self):
+        skeleton = synthetic_human_skeleton(rest_local_rotation_overrides={
+            "Pelvis": quaternion_from_axis_angle((0., 1., 0.), 40.),
+            "Spine3": quaternion_from_axis_angle((1., 0., 0.), -17.),
+            "L_Shoulder": quaternion_from_axis_angle((0., 0., 1.), 23.),
+        })
+        prepared = PreparedReboCapAdapter(skeleton)
+        for angle in (0., 30., 89.9, 90., 90.1, 179., 180., 181., -179.):
+            rotations = tuple(quaternion_from_axis_angle((1., 2., 3.), angle + index)
+                              for index in range(24))
+            for sign in (1, -1):
+                delta = ReboCapDeltaPose.from_rebocap24((.2, 1.1, -.3),
+                    rotations if sign == 1 else tuple(value.negated() for value in rotations))
+                self.assertEqual(prepared.adapt(delta), adapt_rebocap_delta_pose(delta, skeleton))
+
+    def test_prepared_computes_bind_once_and_is_immutable(self):
+        skeleton = synthetic_human_skeleton()
+        delta = self.delta_pose(skeleton)
+        with patch("reboretarget.rebocap_adapter.source_bind_global_rotations",
+                   wraps=source_bind_global_rotations) as bind:
+            prepared = PreparedReboCapAdapter(skeleton)
+            prepared.adapt(delta)
+            prepared.adapt(delta)
+            bind.assert_called_once_with(skeleton)
+        self.assertIs(prepared.source_bind_skeleton, skeleton)
+        with self.assertRaises(FrozenInstanceError):
+            prepared.source_bind_skeleton = synthetic_human_skeleton()
+        with self.assertRaises(FrozenInstanceError):
+            prepared._bind_globals = ()
+
+    def test_prepared_rejects_invalid_static_hierarchy(self):
+        skeleton = synthetic_human_skeleton()
+        joints = list(skeleton.joints)
+        index = skeleton.index("L_Hand")
+        joints[index] = replace(joints[index], parent="L_Elbow")
+        with self.assertRaisesRegex(ValueError, "parent hierarchy"):
+            PreparedReboCapAdapter(SkeletonDefinition(tuple(joints)))
+
+    def test_prepared_preserves_nonunit_input_normalization_and_direct_validation(self):
+        skeleton = synthetic_human_skeleton()
+        prepared = PreparedReboCapAdapter(skeleton)
+        delta = ReboCapDeltaPose((.3, 1., -.2), ((2., -3., 4., -5.),) * 24)
+        self.assertEqual(prepared.adapt(delta), adapt_rebocap_delta_pose(delta, skeleton))
+        for rotations in (((1., 0., 0., 0.),) * 23, ((0., 0., 0., 0.),) * 24,
+                          ((math.nan, 0., 0., 0.),) * 24, ((math.inf, 0., 0., 0.),) * 24):
+            with self.assertRaises(ValueError):
+                ReboCapDeltaPose((0., 1., 0.), rotations)
+        with self.assertRaises(ValueError):
+            ReboCapDeltaPose((0., math.inf, 0.), ((1., 0., 0., 0.),) * 24)
+
+    def test_prepared_does_not_skip_dynamic_checks_after_preparation(self):
+        skeleton = synthetic_human_skeleton()
+        prepared = PreparedReboCapAdapter(skeleton)
+        # Deliberately bypass the value constructor to exercise both adapters'
+        # dynamic checks; ordinary public construction rejects these earlier.
+        for root, rotations in (
+            ((0., 1., 0.), (Quaternion.identity(),) * 23),
+            ((0., 1., 0.), (Quaternion(0., 0., 0., 0.),) * 24),
+            ((0., math.nan, 0.), (Quaternion.identity(),) * 24),
+        ):
+            malformed = object.__new__(ReboCapDeltaPose)
+            object.__setattr__(malformed, "root_translation", root)
+            object.__setattr__(malformed, "sdk_global_rotation_deltas", rotations)
+            with self.assertRaises(ValueError):
+                prepared.adapt(malformed)
+            with self.assertRaises(ValueError):
+                adapt_rebocap_delta_pose(malformed, skeleton)
 
 
 if __name__ == "__main__":

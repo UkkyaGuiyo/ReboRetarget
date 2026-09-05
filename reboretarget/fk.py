@@ -189,6 +189,15 @@ class Quaternion:
         )
         if magnitude <= _NORMAL_EPSILON:
             raise ValueError("quaternion magnitude must be non-zero")
+        if magnitude == 1.0:
+            return self
+        if not math.isfinite(magnitude):
+            # Finite components can overflow the sum of squares. Scale only
+            # that exceptional path, keeping ordinary normalization unchanged.
+            scale = max(abs(self.w), abs(self.x), abs(self.y), abs(self.z))
+            scaled = (self.w / scale, self.x / scale, self.y / scale, self.z / scale)
+            scaled_magnitude = math.sqrt(sum(value * value for value in scaled))
+            return Quaternion(*(value / scaled_magnitude for value in scaled))
         return Quaternion(
             self.w / magnitude,
             self.x / magnitude,

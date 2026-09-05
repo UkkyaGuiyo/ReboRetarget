@@ -6,7 +6,7 @@ access.  It only adapts already-constructed immutable values.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Sequence, Tuple
 
 from .fk import (
@@ -83,12 +83,16 @@ def adapt_rebocap_delta_pose(
     """
 
     validate_rebocap24_skeleton(source_bind_skeleton)
-    if len(delta_pose.sdk_global_rotation_deltas) != len(
-        source_bind_skeleton.joints
-    ):
-        raise ValueError("ReboCap delta pose must contain exactly 24 rotations")
-
     source_bind_globals = source_bind_global_rotations(source_bind_skeleton)
+    return _compose_delta_pose(delta_pose, source_bind_globals)
+
+
+def _compose_delta_pose(
+    delta_pose: ReboCapDeltaPose,
+    source_bind_globals: Tuple[Quaternion, ...],
+) -> SourcePose:
+    if len(delta_pose.sdk_global_rotation_deltas) != len(source_bind_globals):
+        raise ValueError("ReboCap delta pose must contain exactly 24 rotations")
     canonical_source_global_rotations = tuple(
         quaternion_multiply(sdk_rotation_delta, source_bind_global_rotation)
         for sdk_rotation_delta, source_bind_global_rotation in zip(
@@ -99,3 +103,24 @@ def adapt_rebocap_delta_pose(
         delta_pose.root_translation,
         canonical_source_global_rotations,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedReboCapAdapter:
+    """Validate one immutable source bind and reuse only its static rotations.
+
+    Each adaptation still validates the dynamic rotation count, normalizes the
+    quaternion products, and validates the resulting Canonical value. This
+    preparation owns no live input, cache registry, mutable state, or I/O.
+    """
+
+    source_bind_skeleton: SkeletonDefinition
+    _bind_globals: Tuple[Quaternion, ...] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "_bind_globals", source_bind_global_rotations(self.source_bind_skeleton)
+        )
+
+    def adapt(self, delta_pose: ReboCapDeltaPose) -> SourcePose:
+        return _compose_delta_pose(delta_pose, self._bind_globals)

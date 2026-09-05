@@ -29,6 +29,7 @@ from .fk import (
     validate_rebocap24_skeleton,
 )
 from .rebocap_adapter import (
+    PreparedReboCapAdapter,
     ReboCapDeltaPose,
     adapt_rebocap_delta_pose,
     source_bind_global_rotations,
@@ -100,6 +101,7 @@ __all__ = [
     "retarget_sequence",
     "rotate_vector",
     "validate_rebocap24_skeleton",
+    "PreparedReboCapAdapter",
     "ReboCapDeltaPose",
     "adapt_rebocap_delta_pose",
     "source_bind_global_rotations",
