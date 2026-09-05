@@ -24,6 +24,8 @@ def synthetic_human_skeleton(
     lower_leg: float = 0.43,
     hip_width: float = 0.20,
     shoulder_width_scale: float = 1.0,
+    upper_arm: float = 0.28,
+    forearm: float = 0.25,
     rest_local_rotation_overrides: Mapping[str, Quaternion] | None = None,
 ) -> SkeletonDefinition:
     """Return a simple T-pose skeleton in confirmed ReboCap joint order."""
@@ -31,6 +33,9 @@ def synthetic_human_skeleton(
     identity = Quaternion.identity()
     half_hip = hip_width * 0.5
     shoulder_scale = float(shoulder_width_scale)
+    upper_arm, forearm = float(upper_arm), float(forearm)
+    if any(not math.isfinite(length) or length <= 0 for length in (upper_arm, forearm)):
+        raise ValueError("fixture arm lengths must be finite and positive")
     if not math.isfinite(shoulder_scale) or shoulder_scale <= 0.0:
         raise ValueError("shoulder_width_scale must be finite and positive")
     skeleton = SkeletonDefinition(
@@ -67,10 +72,10 @@ def synthetic_human_skeleton(
                 (0.12 * shoulder_scale, 0.0, 0.0),
                 identity,
             ),
-            JointDefinition("L_Elbow", "L_Shoulder", (-0.28, 0.0, 0.0), identity),
-            JointDefinition("R_Elbow", "R_Shoulder", (0.28, 0.0, 0.0), identity),
-            JointDefinition("L_Wrist", "L_Elbow", (-0.25, 0.0, 0.0), identity),
-            JointDefinition("R_Wrist", "R_Elbow", (0.25, 0.0, 0.0), identity),
+            JointDefinition("L_Elbow", "L_Shoulder", (-upper_arm, 0.0, 0.0), identity),
+            JointDefinition("R_Elbow", "R_Shoulder", (upper_arm, 0.0, 0.0), identity),
+            JointDefinition("L_Wrist", "L_Elbow", (-forearm, 0.0, 0.0), identity),
+            JointDefinition("R_Wrist", "R_Elbow", (forearm, 0.0, 0.0), identity),
             JointDefinition("L_Hand", "L_Wrist", (-0.10, 0.0, 0.0), identity),
             JointDefinition("R_Hand", "R_Wrist", (0.10, 0.0, 0.0), identity),
         )

@@ -224,6 +224,12 @@ The historical D-027 one-run gate and run-specific override above are superseded
 - Decision: Continue useful offline work from existing evidence and synthetic data; do not add SDK clients, operate ReboCap/SteamVR/Virtual Desktop/Quest or overlap heavy benchmarks with play. Define coexistence safety separately; perform short labeled motion checks later outside play.
 - Boundary: Discussing active sampling does not authorize recording or raw-data persistence. Standard recording compatibility, storage/retention permission and any concurrent SDK trial remain separate gates. Natural motion supplements but cannot replace physical-axis ground truth. See `PLAYTIME_SAMPLING_ASSESSMENT.md`.
 
+### D-034 — Give arm controls fixed-total balance semantics
+
+- Accepted: 2026-09-05, user approved sequential offline return-gate repair, arm controls and composite-morphology validation.
+- Decision: `Arm Length` scales upper-arm plus forearm total. `UpperArm / Forearm Balance` adds percentage points to the upper arm's share of that scaled total, transferring the same length from the forearm. Shoulder span and hand length are excluded. Invalid, non-finite, non-positive or unrepresentable resulting segments are rejected.
+- Boundary: Pure lengths and synthetic FK only; not a GUI/profile, IK fit, avatar measurement or controller correction. A forearm-only length change moves downstream wrist/hand geometry but does not change the current eight body anchors. Preserve the normal Quest-controller hand route and validate actual VRChat behavior separately.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.

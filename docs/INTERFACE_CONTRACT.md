@@ -119,6 +119,8 @@ Until the switch is proven in a user-authorized A/B session, the minimal Pose Po
 
 ### Offline semantic-transform and representation boundary
 
+The pure `arm_lengths_from_controls` helper changes only target upper-arm/forearm lengths using total scale and fixed-total balance. Synthetic fixtures now accept those lengths, preserving shoulder/hand definitions and the source-agnostic FK. The upper-arm anchors depend on Shoulder-to-Elbow geometry; a forearm-only change therefore does not affect any of the eight body outputs. No new controller, hand output, IK, live input or transport is implied.
+
 Phase 2C produces immutable Quaternion tracker transforms for exactly Hip, Chest, both Knees, both Feet, and both Upper Arms. Each is defined by a target joint, local position offset, and local rotation offset. Position uses `joint_position + rotate(joint_rotation, local_position_offset)` and rotation uses `joint_rotation * local_rotation_offset`. The supplied offsets are replaceable synthetic fixtures, not product defaults.
 
 Phase 2D maps those semantic roles through separate configurable slot data, passes the synthetic metre/Unity-axis positions unchanged, converts Quaternion to the current VRChat Euler convention only at the representation boundary, and encodes/decodes the required OSC message subset in memory. `reboretarget/vrchat_osc.py` has no socket, sender, network, process, filesystem, clock, or live-SDK access.

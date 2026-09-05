@@ -653,3 +653,34 @@ def leg_lengths_from_controls(
         raise ValueError("thigh_calf_balance must leave both segments positive")
     target_upper = target_total * thigh_share
     return (target_upper, target_total - target_upper)
+
+
+def arm_lengths_from_controls(
+    source_upper_arm: float,
+    source_forearm: float,
+    *,
+    arm_length: float = 1.0,
+    upper_arm_forearm_balance: float = 0.0,
+) -> Tuple[float, float]:
+    """Return target upper-arm/forearm lengths, excluding shoulder and hand.
+
+    ``arm_length`` scales their total; balance adds to the upper arm's share
+    of that scaled total (0.05 means five percentage points, not five percent
+    of the upper arm). This is pure geometry, not controller or IK fitting.
+    """
+    upper = _finite_float(source_upper_arm, "source_upper_arm")
+    lower = _finite_float(source_forearm, "source_forearm")
+    scale = _finite_float(arm_length, "arm_length")
+    balance = _finite_float(upper_arm_forearm_balance, "upper_arm_forearm_balance")
+    if upper <= 0.0 or lower <= 0.0 or scale <= 0.0:
+        raise ValueError("arm segment lengths and scale must be positive")
+    total = _finite_float(upper + lower, "source arm total")
+    target_total = _finite_float(total * scale, "target arm total")
+    share = upper / total + balance
+    if not 0.0 < share < 1.0:
+        raise ValueError("upper_arm_forearm_balance must leave both segments positive")
+    target_upper = target_total * share
+    target_lower = target_total - target_upper
+    if target_upper <= 0.0 or target_lower <= 0.0:
+        raise ValueError("target arm segments must remain representably positive")
+    return target_upper, target_lower
