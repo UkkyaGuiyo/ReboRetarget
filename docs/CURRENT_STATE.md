@@ -4,6 +4,8 @@ Last updated: 2026-09-05
 
 ## Current checkpoint
 
+**Standing research-first gate accepted (2026-09-05).** `RESEARCH_FIRST_ENGINEERING.md` is linked from the entrypoint and autonomous authority. The bounded external comparison is recorded in `RESEARCH_LOG.md`; it does not authorize an architecture rewrite or resume Live. Source/tests and the previous measured performance checkpoint are unchanged by this documentation task.
+
 **Offline performance recovery: PASS; Live WAITING_FOR_USER.** The same countdown wrapper completes synthetic 60/20/20 windows with bounded fault cleanup. Fixed-fixture research A pure p99 improved from 3.5055 to 1.4271ms; all A–F primary p99 values are below the unchanged strict 10ms gate. Phase-preserving latest-only scheduling achieved approximately 58.88Hz at a 60Hz target in a synthetic supervised pipeline. Full suite: 216 PASS on each of Python 3.10, 3.11 and 3.13. Independent Scope and final staged Legal/Privacy reviews accepted. See `PERFORMANCE_INVESTIGATION_REPORT.md` and its aggregate evidence. No new Live/body cue is running; the user must explicitly confirm readiness again.
 
 **Phase 2E PASS.** The first supervised recovery attempt received and accepted 1200 Live callbacks, produced 429 eight-anchor/sixteen-message memory snapshots, and exited normally in 20.249216 seconds including parent supervision. No invalid input, timestamp rejection, output send, raw persistence, reconnect, forced Live-child termination, or application/settings operation occurred. ReboCap retained its protected process/listener; VRChat/SteamVR stayed absent and Virtual Desktop was deliberately untouched. See `PHASE_2E_RECOVERY_REPORT.md`. Cycle usage is **1 / 3, complete**; no unnecessary further attempts.

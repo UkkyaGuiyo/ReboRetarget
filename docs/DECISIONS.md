@@ -212,6 +212,12 @@ The historical D-027 one-run gate and run-specific override above are superseded
 - Implementation boundary: Reuse exactly-unit immutable Quaternion values and one immutable prepared source bind; keep the defensive public adapter available. The research consumer uses a phase-preserving target cadence and skips missed deadlines rather than replaying old frames. Its configured frequency is a target, not a hard real-time minimum inter-start interval or a product guarantee. No global Windows timer-resolution or GC-policy change is authorized by this optimization.
 - Evidence and remaining uncertainty: See `PERFORMANCE_INVESTIGATION_REPORT.md`. Historic Live timings cannot be retroactively diagnosed from a successful synthetic optimization. No native rewrite, dependency, framework, output sender or application operation is introduced.
 
+### D-032 — Research before substantial new engineering
+
+- Accepted: 2026-09-05, explicit user research-first directive.
+- Decision: Before substantial new design/implementation, check official sources, GitHub source/examples/tests and relevant issues/PRs; verify freshness, target versions and licenses; compare existing knowledge to the hypothesis before the smallest local experiment. See `RESEARCH_FIRST_ENGINEERING.md` for the bounded gate and evidence record.
+- Boundary: Learn from existing designs without wholesale architecture transplantation or unlicensed source copying. The gate reinforces rather than expands autonomous/Live/publication authority. This does not change current runtime code, acceptance thresholds or Phase 2F-A readiness requirements.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.

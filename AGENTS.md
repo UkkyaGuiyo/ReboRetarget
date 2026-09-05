@@ -18,6 +18,7 @@ Treat these files as the repository's durable project memory:
 6. `docs/INTERFACE_CONTRACT.md` — confirmed external boundaries and the next PoC acceptance gate.
 7. `docs/QUEST_CHEST_YAW_ANCHOR.md` — optional future research, separate from the core MVP.
 8. `docs/AUTONOMOUS_ENGINEERING_AUTHORITY.md` — accepted autonomous-work levels and bounded Phase 2E recovery permission; read before any new live investigation.
+9. `docs/RESEARCH_FIRST_ENGINEERING.md` — standing external-research gate; read before new substantial design, implementation, performance or compatibility work.
 
 If these documents disagree, prefer the user's latest explicit instruction, then the original request, then accepted decisions, then verified real-environment evidence, then `CURRENT_STATE`, and finally older plans or notes. Do not silently delete a conflict; resolve it from evidence or record it as unresolved.
 
@@ -46,6 +47,8 @@ Plans and historical notes do not prove that a feature exists. `CURRENT_STATE` i
 - Favor low latency, low jitter, latest-pose processing, and avoidance of duplicated smoothing.
 
 ## Scope discipline
+
+Think first. Search early. Verify locally. Before a substantial implementation, check official specifications, GitHub source/examples/tests, relevant issues/PRs (including closed outcomes), freshness and licenses. Use the bounded research gate in `docs/RESEARCH_FIRST_ENGINEERING.md`; external examples neither authorize live operations nor justify wholesale architecture replacement.
 
 Implement only the smallest change that advances the current accepted goal. Do not prebuild a plugin system, DI container, event bus, database, repository framework, custom SteamVR driver, or extra communication layer. Keep responsibilities separable only to the degree justified by current work.
 

@@ -4,6 +4,8 @@ Accepted user directive: 2026-09-05. Scope: ReboRetarget development, currently 
 
 ## Work selection and evidence
 
+The standing `RESEARCH_FIRST_ENGINEERING.md` directive supplements this authority: check public official/GitHub implementations and issues early, verify versions and licenses, then choose the smallest local experiment. It does not expand the Live or publication boundary.
+
 Do not stop the project merely because one method is blocked or a test is UNVERIFIED. Stop that branch and choose useful safe work. Observe, distinguish missing evidence, rank at least three plausible causes by evidence/confidence/impact/test cost, run the smallest falsification test, fix, add regression coverage, and reevaluate. Prefer offline tests and comparison with the successful `research/live_pose_inspector.py`. Do not invent work, repeat an unchanged live test, or treat a hypothesis as a root cause.
 
 Delegate independent implementation, SDK-lifecycle analysis, tests, scope review, and publication review when useful. Keep the coordinator responsible for integration and safety. Apply the existing Scope Guard review gate to nontrivial code changes.
