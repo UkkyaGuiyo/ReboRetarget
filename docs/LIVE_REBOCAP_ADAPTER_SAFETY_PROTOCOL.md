@@ -1,6 +1,8 @@
 # Live ReboCap Adapter Safety Protocol
 
-Status: **EXECUTED ONCE / UNVERIFIED / NEW AUTHORIZATION REQUIRED FOR ANY RETRY**
+Status: **TWO AUTHORIZED ATTEMPTS / LATEST ABORTED / PHASE 2E UNVERIFIED**
+
+Latest user override: the retry Safe Point requires the same running ReboCap process, VRChat zero, SteamVR zero, and no ReboCap setting change. Existing Virtual Desktop Service/Streamer and established TCP connections are allowed and must be left unchanged. Their existence alone is not a blocker or FAIL. This explicit instruction supersedes conflicting natural-Safe-Point/session clauses below for this retry. The retry is now consumed and yielded no final aggregate; see `PHASE_2E_RETRY_REPORT.md`. A third connection requires new authorization.
 
 This is the preflight and evidence contract for a short Phase 2E receive-only validation. The user authorized one run on 2026-09-05. The official SDK connection opened and closed successfully, but no Pose callback arrived during 20.015 seconds, so the live value path remains `UNVERIFIED`; see [`LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md`](LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md). This document grants no continuing permission to touch a live system. VRChat crashed during the earlier additional-SDK-client observation; whether that client contributed to the crash remains unresolved.
 
@@ -114,4 +116,4 @@ Phase 2F body-motion execution: NOT RUN
 
 ## Authorization required next
 
-The pure/offline capacity-one latest-pose state primitive is complete. One authorized Phase 2E connection was safe but returned zero Pose callbacks, so it did not pass. Before any retry, the user must confirm that ReboCap's action-calibrated live skeleton/Pose is visibly updating and explicitly authorize a new bounded single-client-first run at a newly confirmed natural Hard Safe Point. The prior permission is spent, and general permission to continue development is not authorization for another live execution. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS.
+The pure/offline capacity-one latest-pose state primitive is complete. The first authorized Phase 2E attempt returned zero callbacks; the second was aborted without an aggregate and did not establish callback count. Fix and test the documented probe timing/lifecycle gaps offline before another run. Any third connection requires new explicit authorization. Virtual Desktop background processes/connections remain permitted under the latest user override and must not be terminated or changed. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS.

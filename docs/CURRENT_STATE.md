@@ -4,6 +4,8 @@ Last updated: 2026-09-05
 
 ## Current checkpoint
 
+Latest Phase 2E retry: **ABORTED / UNVERIFIED**. Under the user's revised Safe Point, Virtual Desktop Service/Streamer and their existing connection were deliberately permitted and untouched. One new 20-second probe remained alive at 43.1 seconds without a final aggregate and was then terminated by the parent; exact termination elapsed time was not captured. ReboCap retained its original process and listener, and VRChat/SteamVR stayed absent. Callback count and SDK lifecycle stage are unknown, not confirmed zero. See `PHASE_2E_RETRY_REPORT.md`. Offline review reproduced a coarse receive-clock false rejection and identified synchronous SDK lifecycle calls outside the enforceable in-process deadline. No further live connection is authorized.
+
 Phase 0.5, the read-only portion of Phase 1, a limited Phase 1.5 live-input observation, and the Phase 2A/2B/2C/2D pure-offline gates are complete. Phase 2D maps the eight Phase 2C semantic Quaternion transforms to configurable numbered slots, converts rotation at the output boundary to VRChat's degree Euler convention, represents separate head alignment and tracking-space alignment, and encodes/decodes the needed OSC 1.0 message subset only in memory. Phase 2E offline preparation includes the accepted safety protocol, a pure capacity-one latest-pose state primitive, and a research-only bounded runner. One authorized Phase 2E connection opened and closed safely but received zero Pose callbacks, so the Live gate is `UNVERIFIED`. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS. The combined suite passes 118 tests. The earlier Phase 1.5 live run was stopped after a concurrent VRChat crash; causality between the additional SDK client and that crash remains unresolved.
 
 ## Actual implementation state
@@ -78,13 +80,13 @@ Not implemented:
 ## Go / No-Go
 
 - **COMPLETE (offline only):** the pure capacity-one latest-pose primitive covers overwrite-on-newer, ordering watermarks, stale/disconnect invalidation, and rearm. Its `threading.Lock` provides atomic access but owns no thread, scheduler, process, or network dependency.
-- **UNVERIFIED / WAITING_FOR_USER:** one Phase 2E connection was safe but had zero callbacks. Any retry requires the user to first confirm visibly updating action-calibrated ReboCap Pose, then provide a new explicit one-run authorization at a newly confirmed natural Safe Point.
+- **UNVERIFIED / WAITING_FOR_USER:** the first Phase 2E attempt had zero callbacks; the second was aborted without an aggregate, so its callback count is unknown. Address the documented probe timing/lifecycle gaps offline before seeking a new one-run authorization. Virtual Desktop background presence is explicitly permitted and is not the blocker.
 - **WAITING_FOR_USER / LATER:** Phase 2F-A is also not authorized. It requires Phase 2E PASS, a new explicit authorization, and the separate Safe Point in `CONTROLLED_MOTION_VALIDATION_PROTOCOL.md`; Phase 2E permission does not carry over.
-- **NO-GO:** creating the Safe Point by starting, stopping, or restarting applications; multi-client testing without separate approval; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
+- **NO-GO:** further application starting/stopping/restarting; multi-client testing without separate approval; UDP/OSC output; VRChat, SteamVR, Virtual Desktop, or Quest interaction; Two Bone IK; production retargeting; Watcher integration; chest-yaw correction; and automatic Native/Retarget switching. The earlier one-time SteamVR/Virtual Desktop shutdown permissions do not permit further Virtual Desktop operations under the latest user instruction. Live multi-client safety, real axis signs, the safe ReboCap native-output control surface, and real VRChat acceptance behavior are not yet proven.
 
 ## Single recommended next task
 
-Stop autonomous live work at this gate. Ask the user to confirm that the ReboCap action-calibrated live skeleton/Pose is visibly updating. Only after that confirmation and a new explicit one-run authorization at a newly confirmed natural Safe Point may Phase 2E be retried. Codex must not create that state by starting, stopping, restarting, configuring, or recalibrating any application.
+Before another Live request, fix and regression-test the probe's coarse receive clock and prepare bounded, sanitized SDK lifecycle diagnostics with parent-enforced duration. The current retry authorization has been consumed. Any third connection requires separate user permission. Virtual Desktop background processes/connections are allowed under the revised user gate and must not be stopped or changed; ReboCap settings/calibration remain protected.
 
 Phase 2F-A is documented only as the gate after Phase 2E PASS. Do not combine their authorizations or start controlled motion during Phase 2E.
 

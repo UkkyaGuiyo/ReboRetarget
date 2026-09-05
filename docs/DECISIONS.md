@@ -190,6 +190,10 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 - Why: Known input motion can test coordinate signs and transformation invariants without exposing an active VR session, while it cannot prove final avatar IK or tracker quality.
 - Boundary: Use one single-client aggregate-only run of at most 60 seconds, no reconnect or OSC/VR contact, and do not infer sensor ownership, independent degrees of freedom, shoulder-tracker presence, anatomical correctness, or product suitability.
 
+### Phase 2E run-specific override to D-027 (2026-09-05)
+
+The user explicitly revised the retry Safe Point to require the same already-running ReboCap process, no VRChat, no SteamVR, and no ReboCap setting change. Existing Virtual Desktop Service/Streamer and their established TCP connection are permitted environmental variables; their presence alone must not block or fail this retry. No further Virtual Desktop termination or configuration operation is allowed. The override authorized one receive-only retry, now consumed; it grants no third connection, reconnect, OSC output, or Phase 2F-A execution. The retry was aborted without an aggregate result; see `PHASE_2E_RETRY_REPORT.md`.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.
