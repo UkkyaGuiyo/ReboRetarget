@@ -39,7 +39,9 @@ Result: exit achieved for static/read-only discovery in `INTERFACE_CONTRACT.md`.
 
 ## Phase 2 — Minimal retargeting specification and test data
 
-Status: **in progress; Phase 2A through Phase 2E complete; Phase 2F-A PARTIAL, offline cue/performance recovery PASS, Live WAITING_FOR_USER**
+Status: **in progress; Phase 2A through Phase 2E complete; Phase 2F-A PARTIAL; corrected wrapper functional PASS, representative timing pending; Live paused for play**
+
+Current sequencing override: VRC play takes priority. The corrected four-stage wrapper has 219-test three-version functional evidence; representative timing is deferred until after play. No new SDK client, recording or VR operation during play. Standard recording/coexistence research is documented in `PLAYTIME_SAMPLING_ASSESSMENT.md`, not a new capture phase or permission to bypass controlled-motion gates.
 
 - A limited official-SDK Pose observation measured the 24-joint stream and cadence without retaining raw motion. It ended after a concurrent VRChat crash, so multi-client safety, known-action axes, reconnect, and shoulder-present/absent behavior remain unverified and live reconnection is not assumed safe.
 - Phase 2A implemented pure/offline global-to-local conversion, motion-delta transfer, and target-skeleton FK. Thirty synthetic numeric tests prove straight, bent, compound, long/short, source-length-independent, mirrored, upper-body propagation, inheritance, non-identity-rest, and leg-control cases without any live-system access.

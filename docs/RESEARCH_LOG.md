@@ -1,5 +1,11 @@
 # Research Log
 
+## 2026-09-05 — Play-priority sampling feasibility
+
+Bounded official-source review found standard recording/export described under the PC panel, but no explicit assurance of recording in the current VR mode without affecting tracking. PC-mode SteamVR output has different HMD semantics and is not a setting-preserving substitute. Encrypted diagnostic recording is not an established skeleton export. Evidence, exact sources, interpretation limits and an unsent vendor question are in `PLAYTIME_SAMPLING_ASSESSMENT.md`. Status: simultaneous standard-recording compatibility **UNVERIFIED**, not disproven. No SDK/recording/application operation was performed.
+
+The earlier preflight found the countdown wrapper still configured for 30Hz and only two speech stages. Its narrow four-stage/60Hz correction passed 219 tests on each of Python 3.10/3.11/3.13 with Scope Guard and privacy/provenance acceptance; these completed results were reused, not rerun during play. The benchmark now reports configuration from the actual aggregate. See `PHASE_2F_A_REPORT.md`. No new p99/cadence is claimed for that changed wrapper; heavy measurement and physical validation remain deferred.
+
 ## Phase 2F-A first controlled cue (2026-09-05)
 
 One authorized rightward-motion session acquired a 60-sample neutral baseline, but the acknowledged hold did not reach the child within its 20-second marker limit. Held/returned windows are empty, so axes and joint semantics remain UNVERIFIED. Input continued at 60.180417 Hz with 2699 valid accepted callbacks and 940 memory pipelines; pure-pipeline p99 11.75 ms exceeded the unchanged 10 ms criterion. Normal supervised exit, protected ReboCap preservation, no remaining probe and no VR application/output operation were confirmed. No automatic reconnect or repeat. See `PHASE_2F_A_REPORT.md` for aggregates, the distinction between timing-association and performance failures, offline tests and remaining gates.

@@ -218,6 +218,12 @@ The historical D-027 one-run gate and run-specific override above are superseded
 - Decision: Before substantial new design/implementation, check official sources, GitHub source/examples/tests and relevant issues/PRs; verify freshness, target versions and licenses; compare existing knowledge to the hypothesis before the smallest local experiment. See `RESEARCH_FIRST_ENGINEERING.md` for the bounded gate and evidence record.
 - Boundary: Learn from existing designs without wholesale architecture transplantation or unlicensed source copying. The gate reinforces rather than expands autonomous/Live/publication authority. This does not change current runtime code, acceptance thresholds or Phase 2F-A readiness requirements.
 
+### D-033 — Preserve play; separate sampling research from capture
+
+- Accepted: 2026-09-05, user's VRC-priority instruction and subsequent authorization for currently safe work.
+- Decision: Continue useful offline work from existing evidence and synthetic data; do not add SDK clients, operate ReboCap/SteamVR/Virtual Desktop/Quest or overlap heavy benchmarks with play. Define coexistence safety separately; perform short labeled motion checks later outside play.
+- Boundary: Discussing active sampling does not authorize recording or raw-data persistence. Standard recording compatibility, storage/retention permission and any concurrent SDK trial remain separate gates. Natural motion supplements but cannot replace physical-axis ground truth. See `PLAYTIME_SAMPLING_ASSESSMENT.md`.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.
