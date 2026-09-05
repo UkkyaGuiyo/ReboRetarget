@@ -147,7 +147,9 @@ def analyze_cue(cue: str, baseline: Sequence[MotionFrame], held: Sequence[Motion
     dominant = max(range(3), key=lambda i: abs(delta[i]))
     others = _length(tuple(delta[i] for i in range(3) if i != dominant))
     magnitude = abs(delta[dominant])
-    position_return = back <= max(floor_m, magnitude*0.35)
+    # A neutral mean alone can hide continued oscillation during the return hold.
+    position_return = (back <= max(floor_m, magnitude*0.35)
+                       and r["noise_m"] <= max(floor_m, magnitude*0.35))
     joints = {}
     invariant_error = 0.0
     for i, name in enumerate(REBOCAP_24_JOINT_NAMES):
@@ -208,6 +210,7 @@ def analyze_cue(cue: str, baseline: Sequence[MotionFrame], held: Sequence[Motion
         axis = pelvis["global_change"]["axis_xyz"]
         if (abs(yaw) > pelvis["threshold_deg"] and abs(axis[1]) >= 2*math.hypot(axis[0], axis[2])
                 and pelvis["held_noise_deg"] <= max(pelvis["threshold_deg"], abs(yaw)*.35)
+                and r["noise_deg"][0] <= max(pelvis["threshold_deg"], abs(yaw)*.35)
                 and pelvis["return_deg"] <= max(pelvis["threshold_deg"], abs(yaw)*.35)):
             result["result"] = "PASS"
             if (yaw < 0) != (cue == "yaw_left"):
@@ -220,20 +223,25 @@ def analyze_cue(cue: str, baseline: Sequence[MotionFrame], held: Sequence[Motion
         threshold_field = "local_threshold_deg" if cue.endswith("knee") else "threshold_deg"
         return_field = "local_return_deg" if cue.endswith("knee") else "return_deg"
         noise_field = "local_held_noise_deg" if cue.endswith("knee") else "held_noise_deg"
+        return_noise_field = "local_noise_deg" if cue.endswith("knee") else "noise_deg"
         selected = max(names, key=lambda name: joints[side+"_"+name][field]["angle_deg"])
         active = joints[side+"_"+selected]
+        active_return_noise = r[return_noise_field][REBOCAP_24_JOINT_NAMES.index(side+"_"+selected)]
         amount = active[field]["angle_deg"]
-        opposite_joint = max((joints[other+"_"+name] for name in names),
-                             key=lambda joint: joint[field]["angle_deg"])
+        opposite_name = max(names, key=lambda name: joints[other+"_"+name][field]["angle_deg"])
+        opposite_joint = joints[other+"_"+opposite_name]
+        opposite_return_noise = r[return_noise_field][REBOCAP_24_JOINT_NAMES.index(other+"_"+opposite_name)]
         opposite = opposite_joint[field]["angle_deg"]
         result["side_response"] = dict(joint=side+"_"+selected, angle_deg=amount,
                                         opposite_max_deg=opposite, local=field=="local_change")
         if amount > active[threshold_field] and amount >= 2*opposite:
             if (active[return_field] <= max(active[threshold_field], amount*.35)
+                    and active_return_noise <= max(active[threshold_field], amount*.35)
                     and active[noise_field] <= max(active[threshold_field], amount*.35)):
                 result["result"] = "PASS"
         elif (opposite > max(opposite_joint[threshold_field], 2*amount)
               and opposite_joint[return_field] <= max(opposite_joint[threshold_field], opposite*.35)
+              and opposite_return_noise <= max(opposite_joint[threshold_field], opposite*.35)
               and opposite_joint[noise_field] <= max(opposite_joint[threshold_field], opposite*.35)):
             result["result"] = "FAIL"
     if result["adapter"]["result"] == "FAIL":

@@ -169,6 +169,8 @@ At 60 seconds, close the SDK client and stop even if no safety abort occurred. I
 
 ## Result and acceptance
 
+Offline return-gate correction (2026-09-05): a neutral return-window mean is insufficient when the samples still oscillate. Require the already-computed return dispersion to satisfy the same existing allowance as the held-window dispersion: `max(baseline-derived floor, 0.35 * response magnitude)`, in metres for root translation and degrees for the cue-relevant rotation. This supplements mean-return proximity; it does not tighten unrelated body joints, loosen any threshold or change the aggregate schema. Translation, yaw and selected/opposite-side joint decisions remain UNVERIFIED for an unstable return. Adapter invariant failures remain FAIL independently.
+
 ```text
 Run: NOT RUN | PASS | FAIL | UNVERIFIED | INCOMPLETE | ABORTED
 Authorization / Phase 2E prerequisite / Safe Point: ...

@@ -70,6 +70,51 @@ class ControlledMotionAnalysisTests(unittest.TestCase):
             self.assertAlmostEqual(result["yaw"]["signed_deg"], degrees)
             self.assertEqual(result["adapter"]["result"], "PASS")
 
+    def test_return_translation_requires_stability_not_just_neutral_mean(self):
+        neutral, held = self.frame(), self.frame(root=(.3, 1., 0.))
+        for amplitude, expected in ((0., "PASS"), (.01, "PASS"), (.3, "UNVERIFIED")):
+            with self.subTest(amplitude=amplitude):
+                returned = [self.frame(root=(sign*amplitude, 1., 0.)) for sign in (-1, 1)]*10
+                result = analyze_cue("right", [neutral]*60, [held]*20, returned, self.bind)
+                self.assertAlmostEqual(result["translation"]["return_distance_m"], 0.)
+                self.assertEqual(result["translation"]["returned"], expected == "PASS")
+                self.assertEqual(result["result"], expected)
+                self.assertEqual(result["adapter"]["result"], "PASS")
+                self.assertEqual(clean_cue_result(result), result)
+
+    def test_return_yaw_requires_stability_with_small_noise_allowed(self):
+        neutral = self.frame()
+        for cue, direction in (("yaw_left", -1), ("yaw_right", 1)):
+            held = self.frame({"Pelvis": quaternion_from_axis_angle((0, 1, 0), direction*35)})
+            for amplitude, expected in ((0., "PASS"), (1., "PASS"), (30., "UNVERIFIED")):
+                with self.subTest(cue=cue, amplitude=amplitude):
+                    returned = [self.frame({"Pelvis": quaternion_from_axis_angle((0, 1, 0), sign*amplitude)})
+                                for sign in (-1, 1)]*10
+                    result = analyze_cue(cue, [neutral]*60, [held]*20, returned, self.bind)
+                    self.assertAlmostEqual(result["joints"]["Pelvis"]["return_deg"], 0.)
+                    self.assertEqual(result["result"], expected)
+                    self.assertEqual(clean_cue_result(result), result)
+
+    def test_return_joint_stability_applies_to_selected_and_opposite_side(self):
+        neutral = self.frame()
+        # Knee uses local rotation; arm and shoulder use the selected global joint.
+        for cue, joint in (("left_knee", "Knee"), ("right_arm", "Shoulder"),
+                           ("left_shoulder", "Collar")):
+            selected_side = "L" if cue.startswith("left_") else "R"
+            for wrong_side in (False, True):
+                side = ("R" if selected_side == "L" else "L") if wrong_side else selected_side
+                name = side+"_"+joint
+                held = self.frame({name: quaternion_from_axis_angle((1, 0, 0), 30)})
+                for amplitude in (0., 1., 30.):
+                    with self.subTest(cue=cue, wrong_side=wrong_side, amplitude=amplitude):
+                        returned = [self.frame({name: quaternion_from_axis_angle((1, 0, 0), sign*amplitude)})
+                                    for sign in (-1, 1)]*10
+                        result = analyze_cue(cue, [neutral]*60, [held]*20, returned, self.bind)
+                        expected = "UNVERIFIED" if amplitude == 30. else "FAIL" if wrong_side else "PASS"
+                        self.assertEqual(result["result"], expected)
+                        self.assertEqual(result["adapter"]["result"], "PASS")
+                        self.assertEqual(clean_cue_result(result), result)
+
     def test_knee_local_motion_and_inherited_ankle(self):
         for side, cue in (("L","left_knee"),("R","right_knee")):
             result = self.run_cue(cue, self.frame({side+"_Knee": quaternion_from_axis_angle((1,0,0),30)}))
