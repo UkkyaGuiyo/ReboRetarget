@@ -1,6 +1,8 @@
 # Live ReboCap Adapter Safety Protocol
 
-Status: **PHASE 2E UNVERIFIED / AUTONOMOUS RECOVERY AUTHORIZED WITH GATES**
+Status: **PHASE 2E PASS / RECOVERY CYCLE COMPLETE (1 OF 3 ATTEMPTS USED)**
+
+The supervised recovery attempt accepted 1200 Live callbacks and completed normal SDK/child shutdown in 20.249216 seconds, within its 45-second parent deadline. See `PHASE_2E_RECOVERY_REPORT.md`. No further recovery attempt is needed. This protocol remains the acceptance/safety contract, not continuing permission after success or authorization for Phase 2F-A, OSC output, or VR application operations.
 
 Latest user authority: `AUTONOMOUS_ENGINEERING_AUTHORITY.md` permits at most three sequential bounded retries in one recorded Phase 2E investigation cycle, after offline recovery tests and review. Each retry requires a code change or new hypothesis; there is no reconnect loop. The Safe Point requires the same running ReboCap process, VRChat zero, SteamVR zero, and no ReboCap setting/calibration change. Existing Virtual Desktop Service/Streamer and established TCP connections are allowed and must be left unchanged. Their existence alone is not a blocker or FAIL.
 
@@ -116,4 +118,4 @@ Phase 2F body-motion execution: NOT RUN
 
 ## Recovery authority
 
-The pure/offline capacity-one latest-pose state primitive is complete. Fix and regression-test the documented clock and lifecycle gaps, run independent review, then use only the bounded standing permission defined in `AUTONOMOUS_ENGINEERING_AUTHORITY.md` when its gate holds. Record attempt usage and evidence in the recovery report. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS. No recovery work authorizes OSC output or VR application operations.
+The clock correction, supervised lifecycle boundary, and 140-test offline suite are verified; the Live value-path gate passed under `AUTONOMOUS_ENGINEERING_AUTHORITY.md`. The recovery cycle ended after its first attempt, with the remaining two unused. Phase 2F-A is now waiting for separate user authorization and controlled motion; its Phase 2E prerequisite is satisfied. No recovery result authorizes OSC output or VR application operations.

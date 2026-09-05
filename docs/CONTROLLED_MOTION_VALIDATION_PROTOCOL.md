@@ -183,4 +183,4 @@ Aborts, ambiguity, and interpretation limits: ...
 
 ## Authorization required next
 
-Phase 2F-A remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. One authorized Phase 2E connection opened safely but returned zero Pose callbacks and is `UNVERIFIED`; it did not satisfy this protocol's prerequisite. Only after a newly authorized Phase 2E retry passes may the user separately authorize this one controlled-motion run at a newly confirmed natural Safe Point.
+Phase 2F-A remains **NOT AUTHORIZED TO EXECUTE / WAITING_FOR_USER**. The Phase 2E prerequisite passed in the supervised recovery run recorded in `PHASE_2E_RECOVERY_REPORT.md`. The user must still separately authorize this controlled-motion run and its preflight. No body cues, thresholds, recording harness or execution have been added by the Phase 2E recovery. Before execution, the controlled-motion runner must retain high-resolution receive/cue timing and parent-bounded native lifecycle behavior; the measured Phase 2E consumer rate is not a guarantee that every planned cue window fits, so the existing skip/incomplete rules remain essential.

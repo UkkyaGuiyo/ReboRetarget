@@ -23,6 +23,7 @@ Here, **tracked** means the files recorded by the baseline commit. **Reachable**
 | `tests/` | Hand-authored synthetic fixtures and deterministic tests; no captured motion, vendor fixture, or SDK code. |
 | `research/live_pose_inspector.py` | Project-authored aggregate observer. It dynamically imports a user-supplied official SDK outside the repository and retains aggregates rather than raw Pose frames. |
 | `research/live_retarget_safety_probe.py` | Independently authored bounded Phase 2E wrapper around the documented official SDK callback/open/close surface and existing project core. It imports the user-supplied SDK from outside the repository, has no copied vendor implementation or direct sender, and returns sanitized aggregate evidence rather than Pose values. |
+| `research/supervised_retarget_probe.py` | Independently authored standard-library child-process supervisor based on Python's published multiprocessing/time APIs. It suppresses child diagnostics, exchanges bounded aggregate-only JSON, and may terminate only its own probe child. No SDK or vendor implementation is included. |
 | `docs/` | Project-authored summaries, decisions, test reports, factual identifiers, citations, and sanitized aggregates; no vendor archive, decompiled source, or raw log. |
 
 The factual 24-joint name list and public interface/address constants naturally may match official documentation. They are factual interface data and are not treated as copied implementation.
@@ -36,6 +37,7 @@ The factual 24-joint name list and public interface/address constants naturally 
 - OSC 1.0 specification: <https://opensoundcontrol.stanford.edu/spec-1_0.html>
 - Unity rotations: <https://docs.unity3d.com/6000.0/Documentation/Manual/QuaternionAndEulerRotationsInUnity.html>
 - OpenVR driver documentation: <https://github.com/ValveSoftware/openvr/blob/master/docs/Driver_API_Documentation.md>
+- Python multiprocessing and timing: <https://docs.python.org/3.10/library/multiprocessing.html> and <https://docs.python.org/3.10/library/time.html>
 
 The official archives were inspected outside this repository and were not committed. References and hashes establish evidence provenance, not redistribution rights.
 
@@ -67,5 +69,7 @@ None of those objects was reachable from `main` or another pushed ref; an ordina
 - Every future dependency or copied asset requires a new source/license review.
 
 ## Future-change gate
+
+The Phase 2E recovery diff received a separate privacy/provenance review of its original supervisor/probe changes, synthetic tests, and sanitized documentation. No vendor code/binary, raw motion, actual local SDK path, credential, or device identifier was added. This incremental review does not replace or redate the historical full-history snapshot above.
 
 Before a public push, inspect staged names/content, the diff, reachable history, binary/archive additions, secrets/paths/identifiers, and dependency changes. Any serious finding invokes the STOP and no-automatic-history-rewrite rule in [`LEGAL_BOUNDARIES.md`](LEGAL_BOUNDARIES.md). Update this provenance snapshot only when a component, source, dependency, or history fact materially changes.

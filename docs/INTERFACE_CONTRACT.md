@@ -1,6 +1,6 @@
 # Interface Contract
 
-Status: **Phase 2D offline interface contract**
+Status: **Phase 2E single-client Live value path validated; output remains memory-only**
 Last updated: 2026-09-05
 
 This document defines the narrow external boundary for the first ReboRetarget proof of concept. It records confirmed behavior separately from requirements and unresolved items. It is not an implementation claim.
@@ -69,11 +69,11 @@ Collar, Shoulder, Elbow, Wrist, and Hand rotations are always represented in the
 
 `LatestPoseSlot` now implements the state portion of this contract offline. It accepts already-validated generic values and caller-supplied timestamps, stores at most one sample, requires both receive and source timestamps to advance strictly, and clears its value on stale/disconnect while preserving ordering watermarks. Payload is opaque and is neither validated nor copied: `None` may be a valid value, while Pose callers must provide an already-validated immutable value and not mutate it after publication. It uses one `threading.Lock` for atomic multi-field access but creates no thread and reads no clock. The 0.250-second threshold used in tests is a provisional Phase 2E candidate based on the observed 130.4663 ms maximum receive gap and zero gaps at least 250 ms; it is not a product default.
 
-On 2026-09-05, the initial authorized 20.015-second single-client run opened and closed the official SDK connection successfully while ReboCap stayed alive, but delivered zero Pose callbacks. A subsequently authorized retry under the revised Safe Point was aborted without an aggregate: open completion and callback count are unknown, not zero. See [`PHASE_2E_RETRY_REPORT.md`](PHASE_2E_RETRY_REPORT.md). Consequently the live delta -> canonical -> latest -> FK -> anchors -> memory-only OSC value path and its latency remain `UNVERIFIED`. Synthetic tests do not establish native SDK lifecycle bounds. The retry authorization is consumed; another connection requires new permission after offline clock and lifecycle diagnostics are addressed. Virtual Desktop background processes/connections are explicitly permitted and must remain untouched.
+On 2026-09-05, the initial attempt delivered zero callbacks and a second was aborted without an aggregate; their causes remain unknown. See `PHASE_2E_RETRY_REPORT.md`. After clock and supervised-lifecycle recovery, **Phase 2E passed** on the first standing-permission cycle attempt: 1200 valid callbacks traversed Delta/Canonical/latest, 429 unique values completed Target FK/eight anchors/sixteen memory OSC messages, and the client closed with clean child exit inside 20.249216 seconds total. See [`PHASE_2E_RECOVERY_REPORT.md`](PHASE_2E_RECOVERY_REPORT.md). The cycle is complete at 1/3 attempts. The supervisor loads no vendor SDK in its parent and retains only sanitized aggregate checkpoints. Virtual Desktop background processes/connections are permitted and untouched. PASS is single-client Live value-path evidence, not avatar or active-VR coexistence proof.
 
 ### Still unverified live
 
-- Known-action axis signs and connection of the offline T-pose-delta adapter to live SDK values.
+- Known-action axis signs and anatomical input semantics. The T-pose-delta adapter's Live value connection is now confirmed by Phase 2E; controlled motion is not.
 - Multiple simultaneous external SDK clients. The GUI must be running because it provides the broadcast, but multi-client support is not explicitly documented.
 - The observable difference between physical shoulder trackers present and absent.
 
@@ -178,7 +178,7 @@ Virtual Desktop remains the HMD/controller transport into SteamVR. Its optional 
 
 The Phase 2D offline gate is implemented: eight semantic Quaternion transforms become eight deterministic VRChat representation values and sixteen OSC `,fff` messages, then decode successfully in memory. Rotation-equivalent round trips cover the required axes, compounds, singularities, angle boundaries, and `q/-q`. Head alignment is a separate value model; yaw-plus-translation tracking-space alignment preserves body morphology.
 
-The pure/offline capacity-one latest-pose state primitive is implemented without an SDK client, owned thread, scheduler, process access, or network path. The separate **Live ReboCap Adapter Safety Validation** remains `UNVERIFIED`: the initial connection returned zero Pose callbacks and the authorized retry was aborted without an aggregate. The current run-specific Safe Point override, single-client-first boundary, aborts, and acceptance evidence are defined in [`LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`](LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md); results are in [`LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md`](LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md) and [`PHASE_2E_RETRY_REPORT.md`](PHASE_2E_RETRY_REPORT.md). Multi-client testing requires separate opt-in approval. Actual UDP/OSC transmission, VRChat startup, or interaction with SteamVR/Virtual Desktop/Quest remain later gates. Any future output result must be verified in VRChat, not merely by packet construction or upstream registration.
+The pure/offline capacity-one latest-pose primitive remains free of owned threads and SDK/process/network dependencies. The separate research **Live ReboCap Adapter Safety Validation** now passes with measured evidence in [`PHASE_2E_RECOVERY_REPORT.md`](PHASE_2E_RECOVERY_REPORT.md). The revised Safe Point, single-client-first boundary, parent watchdog, aborts and acceptance gate are in `LIVE_REBOCAP_ADAPTER_SAFETY_PROTOCOL.md`. Historical zero-callback and aborted retry reports remain evidence, not current failure status. Phase 2F-A requires separate authorization. Multi-client testing, actual UDP/OSC transmission and VR application interactions remain later gates. Actual avatar output must eventually be verified in VRChat, not by packet construction or upstream registration alone.
 
 ## 6. Sources
 
