@@ -39,7 +39,7 @@ Result: exit achieved for static/read-only discovery in `INTERFACE_CONTRACT.md`.
 
 ## Phase 2 — Minimal retargeting specification and test data
 
-Status: **in progress; Phase 2A through Phase 2E complete; Phase 2F-A controlled motion awaits separate user authorization**
+Status: **in progress; Phase 2A through Phase 2E complete; Phase 2F-A PARTIAL, offline cue/performance recovery PASS, Live WAITING_FOR_USER**
 
 - A limited official-SDK Pose observation measured the 24-joint stream and cadence without retaining raw motion. It ended after a concurrent VRChat crash, so multi-client safety, known-action axes, reconnect, and shoulder-present/absent behavior remain unverified and live reconnection is not assumed safe.
 - Phase 2A implemented pure/offline global-to-local conversion, motion-delta transfer, and target-skeleton FK. Thirty synthetic numeric tests prove straight, bent, compound, long/short, source-length-independent, mirrored, upper-body propagation, inheritance, non-identity-rest, and leg-control cases without any live-system access.
@@ -48,6 +48,7 @@ Status: **in progress; Phase 2A through Phase 2E complete; Phase 2F-A controlled
 - Phase 2D added a pure VRChat representation layer: validated semantic-role-to-slot data, Quaternion-to-degree-Euler conversion for fixed `Z -> X -> Y` application, strict in-memory OSC 1.0 `,fff` encode/decode, a separate head-alignment value model, and a yaw-plus-translation tracking-space transform. Eight synthetic trackers produce sixteen decodable messages; no socket, sender, timing loop, live SDK, or VR application access was added.
 - Phase 2E initially added a safety protocol, capacity-one latest-pose state with strict ordering/invalidation, and a research runner with synthetic SDK tests. Its first 20.015-second connection returned zero callbacks and a second attempt was aborted without an aggregate. Those historical attempts were UNVERIFIED; the supervised recovery below subsequently passed the Live value-path gate.
 - Phase 2F-A is a separately authorized controlled-motion input-semantics gate after Phase 2E PASS. Its protocol permits one single-client, aggregate-only run of at most 60 seconds with no headset/active VR, reconnect, or OSC output. Preparing the protocol did not execute it.
+- Two authorized rightward trials were incomplete. The accepted next gate became offline same-wrapper countdown/fault completion and performance investigation, followed by renewed explicit user readiness before another body cue. See `PHASE_2F_A_REPORT.md` and `PERFORMANCE_INVESTIGATION_REPORT.md`; historical authorization is not permission to start while the user is unprepared.
 
 - Leg Length and Thigh/Calf Balance now have explicit initial mathematical semantics. The other four morphology controls remain to be specified from controlled cases.
 - Capture or construct the smallest lawful, non-personal pose samples needed to check straight legs, crouch, crossing, kick, weight shift, outstretched arms, and folded arms.

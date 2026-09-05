@@ -1,5 +1,9 @@
 # Research Log
 
+## Phase 2F-A first controlled cue (2026-09-05)
+
+One authorized rightward-motion session acquired a 60-sample neutral baseline, but the acknowledged hold did not reach the child within its 20-second marker limit. Held/returned windows are empty, so axes and joint semantics remain UNVERIFIED. Input continued at 60.180417 Hz with 2699 valid accepted callbacks and 940 memory pipelines; pure-pipeline p99 11.75 ms exceeded the unchanged 10 ms criterion. Normal supervised exit, protected ReboCap preservation, no remaining probe and no VR application/output operation were confirmed. No automatic reconnect or repeat. See `PHASE_2F_A_REPORT.md` for aggregates, the distinction between timing-association and performance failures, offline tests and remaining gates.
+
 Use this file for durable evidence that affects implementation: confirmed facts, failed experiments, rejected approaches, uncertainty, and items worth rechecking. Do not use it as a session diary.
 
 ## Entry format
@@ -298,3 +302,13 @@ Do not paste secrets, personal data, device identifiers, proprietary binaries/co
 - First callback delay was 0.205819 seconds; pure consumer pipeline p99 was approximately 3.25 ms and callback-receipt-to-decode p99 18.5 ms. These are research value-path measurements, not physical tracking latency or a product scheduling guarantee. Full sample counts, approximate histogram metrics and limitations are in `PHASE_2E_RECOVERY_REPORT.md`.
 - The same ReboCap process/listener and Virtual Desktop processes were preserved; VRChat/SteamVR stayed absent. Application/settings/calibration operations, reconnect, OSC/UDP/direct output sends and Raw Pose persistence were zero. Virtual Desktop remained running intentionally under user permission.
 - Result: **Phase 2E PASS**, cycle complete after **1 / 3** allowed attempts. Prior no-callback and missing-aggregate causes remain unresolved; successful recovery does not retroactively establish them. Phase 2F-A now has its Phase 2E prerequisite satisfied but remains separately unauthorized and waiting for user-controlled motion.
+
+## 2026-09-05 — Phase 2F offline recovery and performance investigation
+
+- The later authorized rightward trials remained incomplete (60/0/0, then 60/20/0). Chat/tool-paced cues caused missing windows; their pure p99 11.75/20.05ms are separate performance failures, not evidence that full cue analysis ran. See `PHASE_2F_A_REPORT.md`.
+- The fast Phase 2E and Phase 2F starting core were identical. Fixed-fixture A–F tests did not reproduce sustained 20ms performance. cProfile instead measured repeated Quaternion allocation and static bind FK; exact-unit immutable reuse and prepared bind preserve dynamic validation while removing proven work.
+- Same fixture, Python 3.10, 3×500, warmup 50: research A pure p99 3.5055→1.4271ms, full p99 5.5122→1.9146ms. All final A–F p99 pass strict <10ms; E has a single 10.6513ms maximum. Deferred F completion analysis remains 100ms-class and is reported separately.
+- Synthetic supervisor tests reproduced old 21.6Hz consumption at 30Hz configuration because 33.3ms waits averaged 44ms. Initial wake/reset-at-current-time scheduling did not help; phase-preserving deadlines with latest-only skipped ticks achieved 30.14/58.88Hz for 30/60 targets. No OS timer setting or priority was changed.
+- Artificial Python thread contention inflated pure p99 to approximately 17.8–17.9ms with GC either ON or OFF; sampled GC pauses were at most 1.18ms. This provides a plausible mechanism, not retrospective proof of the historic Live cause. No runtime GC or GIL policy change was adopted.
+- The exact local countdown/supervisor path completed 60/20/20 in three final silent synthetic runs of 12.06–12.19 seconds, including cleanup. Scheduled markers, human confirmation and audibility remain distinct. Open/close/speech hangs and malformed/no-input outcomes are exercised by bounded owned-child tests.
+- All 216 tests passed on each of Python 3.10, 3.11 and 3.13. Per-run evidence, allocation diagnostics, review, publication and remaining limitations are maintained in `PERFORMANCE_INVESTIGATION_REPORT.md` and `PERFORMANCE_RESULTS.json`. This investigation made no Live SDK connection, body cue, actual speech, VR application/settings operation or OSC/UDP send.

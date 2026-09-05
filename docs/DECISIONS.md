@@ -198,6 +198,20 @@ The user explicitly revised the retry Safe Point to require the same already-run
 
 The historical D-027 one-run gate and run-specific override above are superseded for Phase 2E recovery by the user's `AUTONOMOUS_ENGINEERING_AUTHORITY.md`: useful offline recovery is autonomous; at most three sequential, changed-hypothesis Live attempts in one recorded cycle are permitted only after offline watchdog tests and the revised Safe Point. This is an accepted authority change, not a Phase 2E PASS. Protected settings, Virtual Desktop preservation, no output send, legal boundaries, and separately gated Phase 2F-A remain unchanged.
 
+### D-030 — User-paced Phase 2F-A sessions
+
+- Date: 2026-09-05
+- Decision: The user authorized controlled known-motion validation, reported ordinary ReboCap Calibration complete, and approved one motion per supervised session of at most 60 total seconds with 20-second operator-response limits. This supersedes D-028's old single-run-all-cues boundary, not its receive-only/privacy restrictions.
+- Boundary: Normal SDK close and owned-child exit are required before the next session. No overlapping clients or automatic reconnect loop. Virtual Desktop is intentionally untouched. ReboCap settings, Calibration, VR applications and all output sends remain out of scope. A timeout or ambiguous cue is not physical validation; report incomplete evidence rather than rushing the user.
+
+### D-031 — Offline cue recovery and measured Python optimization
+
+- Date: 2026-09-05
+- Decision: Scheduled cue progression belongs in the bounded local controller, not chat or tool round trips. A scheduled marker and successful speech process are not human confirmation or proof of audibility. After offline recovery, obtain renewed explicit user readiness before the next controlled-motion session.
+- Performance boundary: Preserve dynamic input validation, the eight-anchor/sixteen-message research encode/decode path, latest-only semantics and strict pure p99 **< 10 ms**. Record production-value timing separately from the heavier research probe; neither is physical sensor-to-avatar latency.
+- Implementation boundary: Reuse exactly-unit immutable Quaternion values and one immutable prepared source bind; keep the defensive public adapter available. The research consumer uses a phase-preserving target cadence and skips missed deadlines rather than replaying old frames. Its configured frequency is a target, not a hard real-time minimum inter-start interval or a product guarantee. No global Windows timer-resolution or GC-policy change is authorized by this optimization.
+- Evidence and remaining uncertainty: See `PERFORMANCE_INVESTIGATION_REPORT.md`. Historic Live timings cannot be retroactively diagnosed from a successful synthetic optimization. No native rewrite, dependency, framework, output sender or application operation is introduced.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.
