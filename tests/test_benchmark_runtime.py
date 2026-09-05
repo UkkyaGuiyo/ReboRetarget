@@ -70,6 +70,7 @@ class RuntimeBenchmarkTests(unittest.TestCase):
         report = benchmark(modes=("H",), consumer_rates=(30.,))
         self.check_report(report)
         row = report["rows"][0]
+        self.assertEqual(row["configured_consumer_hz"], 60.)
         self.assertEqual(row["motion_state"], "COMPLETE")
         self.assertEqual(row["motion_counts"], dict(baseline=60, held=20, returned=20))
         self.assertEqual(row["countdown_error"], "NONE")

@@ -4,6 +4,30 @@ Date: 2026-09-05. Status: **PARTIAL — motion semantics UNVERIFIED**.
 
 This report preserves the historical Live attempts. The subsequent offline wrapper/performance recovery is documented in `PERFORMANCE_INVESTIGATION_REPORT.md`; its results supersede only the old untested-wrapper checkpoint, not these motion findings.
 
+## Later right-only restart: preflight, no Live session
+
+The user supplied the Research-First / Autonomous Cue Wrapper Edition directive and explicitly reported readiness after reattachment/calibration instructions. Read-only preflight found the protected ReboCap process and its native 3D child running, no VRChat or SteamVR process, and the existing listener with only its native 3D client in the inspected connections. Virtual Desktop was untouched. This is a time-specific inspection, not a reusable Safe Point.
+
+Before connecting, source inspection and independent peer review found a mismatch with the new requested sequence: `run_countdown` constructed `ProbeConfig(duration_seconds=55)`, retaining the 30Hz default, and emitted only move/return speech. Initial neutral and finish were silent. The earlier G2 synthetic 58.88Hz result used a separate 60Hz configuration; earlier H wrapper success did not establish that configuration or the newly requested speech stages.
+
+No new official SDK connection, speech or body cue was started. The user was released from holding still while a bounded offline wrapper correction was selected. The latest permission is for one right cue only; it has not been consumed. Before any eventual run, re-establish current readiness and the Safe Point rather than assuming the user stayed ready during offline work. Raw Pose saved, output sends, settings/Calibration changes and application launches remain zero for this preflight.
+
+## Four-stage wrapper: offline functional completion
+
+The narrow correction explicitly selects a 60Hz consumer and schedules initial-neutral, move, return and finish speech. Finish speech follows clean SDK-child exit and describes capture completion, never semantic PASS. The original total deadline, per-speech timeout and owned-child-only cleanup remain in force. The synthetic benchmark reports the actual aggregate configuration instead of labeling the wrapper from an unrelated requested-rate variable.
+
+Existing completed full-suite results, reused without rerunning during VRC play:
+
+| Python | Tests | Elapsed seconds | Result |
+|---|---:|---:|---|
+| 3.10 | 219 | 320.414 | OK, exit 0 |
+| 3.11 | 219 | 318.686 | OK, exit 0 |
+| 3.13 | 219 | 319.674 | OK, exit 0 |
+
+The suites include silent fake-SDK/fake-speech 60/20/20 completion, initial/finish guidance boundaries, no-input classification, speech failures/timeouts, SDK lifecycle hangs and owned-child cleanup. Some suites overlapped as functional checks; these elapsed times are not controlled performance benchmarks. Independent Scope Guard accepted the correction and privacy/provenance review accepted its fixed allowlist/aggregate-only evidence. A subsequent read-only comparison confirmed no additional code changes after these results.
+
+No actual speech, new Live SDK connection or body cue occurred. The changed four-stage wrapper has no new representative p99/cadence benchmark; do not transfer old two-stage H timings or separate G2 58.88Hz results to it. Real audibility, physical-right mapping and active-VR coexistence remain UNVERIFIED. The user now prioritizes VRC play: retain the correction locally, defer heavy measurement and Live work, and do not assume earlier readiness remains valid.
+
 ## Authorization and session
 
 The user reported ordinary Calibration complete, confirmed neutral readiness, and authorized controlled known motions. The subsequent approved bounds were one motion per session, 60 total supervised seconds and 20 seconds per operator response. No application or Calibration operation was performed by Codex.

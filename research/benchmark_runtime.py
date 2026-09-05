@@ -157,7 +157,7 @@ class _SilentJob:
         return True
 
 
-def _safe_row(report, telemetry, parent_cpu, parent_wall, requested_hz):
+def _safe_row(report, telemetry, parent_cpu, parent_wall):
     aggregate = report.get("aggregate")
     if not isinstance(aggregate, dict) or not report.get("child_exit_observed"):
         raise ValueError("synthetic child result unavailable")
@@ -173,7 +173,8 @@ def _safe_row(report, telemetry, parent_cpu, parent_wall, requested_hz):
     duration = aggregate["lifecycle"]["observation_duration_seconds"]
     return dict(status=report["status"], clean_child_exit=report["child_exit_code"] == 0,
         within_deadline=report["within_deadline"], forced_termination=report["termination_requested"],
-        configured_consumer_hz=requested_hz, observed_callback_hz=aggregate["callback_rate"]["average_hz"],
+        configured_consumer_hz=aggregate["configuration"]["consumer_hz"],
+        observed_callback_hz=aggregate["callback_rate"]["average_hz"],
         observed_consumer_hz=processed/duration if duration else None,
         observation_seconds=duration, parent_total_wall_seconds=parent_wall,
         parent_cpu_seconds=parent_cpu, **extras,
@@ -217,7 +218,7 @@ def benchmark(*, modes=("G0", "G1", "G2"), duration=5., repeats=1, consumer_rate
                     result = supervisor.supervise_probe(sdk_root=root, port=7690, process_id=os.getpid(),
                         config=probe.ProbeConfig(duration_seconds=duration, consumer_hz=rate),
                         hard_timeout_seconds=min(60., duration+5), _sdk_loader=loader)
-                row = _safe_row(result, telemetry, time.process_time()-cpu, time.perf_counter()-start, rate)
+                row = _safe_row(result, telemetry, time.process_time()-cpu, time.perf_counter()-start)
                 row.update(mode=mode, repeat=repeat)
                 if mode == "H":
                     row["motion_counts"] = result["motion"]["counts"]

@@ -83,9 +83,9 @@ def countdown_sdk_loader(_path, *, mode):
 class CountdownUnitTests(unittest.TestCase):
     def setUp(self):
         self.clock, self.jobs = ManualClock(), []
-        def factory(cue, returning):
+        def factory(cue, stage):
             job = FakeSpeech(self.clock)
-            self.jobs.append((returning, job))
+            self.jobs.append((stage, job))
             return job
         self.controller = CountdownCue("right", clock=self.clock, speech_factory=factory)
 
@@ -95,30 +95,49 @@ class CountdownUnitTests(unittest.TestCase):
     def test_commands_wait_for_child_ack_then_four_second_settle(self):
         self.assertIsNone(self.controller())
         self.state("WAIT_BASELINE")
-        self.assertEqual(self.controller(), "baseline")
-        self.state("READY_MOVE")
-        self.assertEqual(self.controller(), "move")
-        self.assertEqual(self.jobs, [])
         self.assertIsNone(self.controller())
-        self.state("WAIT_HOLD")
-        self.assertIsNone(self.controller())
-        self.assertEqual(len(self.jobs), 1)
+        self.assertEqual([stage for stage, _ in self.jobs], ["initial_neutral"])
         self.clock.value = 3.99
         self.assertIsNone(self.controller())
         self.clock.value = 4.
+        self.assertEqual(self.controller(), "baseline")
+        self.state("READY_MOVE")
+        self.assertEqual(self.controller(), "move")
+        self.assertEqual(len(self.jobs), 1)
+        self.assertIsNone(self.controller())
+        self.state("WAIT_HOLD")
+        self.assertIsNone(self.controller())
+        self.assertEqual(len(self.jobs), 2)
+        self.clock.value = 7.99
+        self.assertIsNone(self.controller())
+        self.clock.value = 8.
         self.assertEqual(self.controller(), "hold")
         self.state("READY_RETURN")
         self.assertEqual(self.controller(), "return")
-        self.assertEqual(len(self.jobs), 1)
+        self.assertEqual(len(self.jobs), 2)
         self.state("WAIT_NEUTRAL")
         self.assertIsNone(self.controller())
-        self.clock.value = 8.
+        self.clock.value = 12.
         self.assertEqual(self.controller(), "neutral")
         self.state("COMPLETE")
         self.assertIsNone(self.controller())
         self.assertEqual(self.controller.commands_sent, 5)
         self.assertEqual(self.controller.evidence()["user_confirmation"], "PENDING")
         self.assertEqual(self.controller.evidence()["speech_audibility"], "UNVERIFIED")
+        self.assertEqual(self.controller.completed_speech_stages, ["initial_neutral", "move", "return"])
+
+    def test_baseline_waits_for_neutral_audio_completion_and_settle(self):
+        self.controller.speech_factory = lambda *_: FakeSpeech(self.clock, 5.)
+        self.state("WAIT_BASELINE")
+        self.assertIsNone(self.controller())
+        self.clock.value = 4.9
+        self.assertIsNone(self.controller())
+        self.clock.value = 5.
+        self.assertIsNone(self.controller())
+        self.clock.value = 8.99
+        self.assertIsNone(self.controller())
+        self.clock.value = 9.
+        self.assertEqual(self.controller(), "baseline")
 
     def test_late_successful_poll_is_timeout_not_hold(self):
         self.controller.phase = "WAIT_MOVE_ACCEPTED"
@@ -157,25 +176,29 @@ class CountdownUnitTests(unittest.TestCase):
             termination_requested=False, termination_error=False, invalid_packet_count=0,
             aggregate=dict(abort_reason="USER_STOP", counts=dict(callbacks_received=0),
                 lifecycle=dict(sdk_open_successes=1, sdk_close_successes=1)))
-        for variation in ("clean", "user_stop", "forced", "protocol", "sdk_fault", "some_input"):
+        for variation in ("clean", "neutral_only", "motion_spoken", "user_stop", "forced", "protocol", "sdk_fault", "some_input"):
             report = deepcopy(clean)
             if variation == "forced": report["termination_requested"] = True
             if variation == "protocol": report["invalid_packet_count"] = 1
             if variation == "sdk_fault": report["aggregate"]["abort_reason"] = "SDK_OPEN_FAILED"
             if variation == "some_input": report["aggregate"]["counts"]["callbacks_received"] = 1
             def fake_probe(**kwargs):
+                if variation in ("neutral_only", "motion_spoken"):
+                    controller = kwargs["command_source"]
+                    controller.speech_started = controller.speech_completed = 1
+                    controller.completed_speech_stages = ["initial_neutral" if variation == "neutral_only" else "move"]
                 kwargs["command_source"]._fail("USER_STOP" if variation == "user_stop" else "COUNTDOWN_DEADLINE")
                 return report
             with self.subTest(variation=variation), patch(
                     "research.countdown_motion_cue.supervise_probe", side_effect=fake_probe):
                 result = run_countdown(sdk_root=Path("."), port=7690, process_id=os.getpid(),
                     cue="right", user_ready=True, _speech_factory=FakeSpeech)
-                self.assertEqual(result["status"], "UNVERIFIED" if variation == "clean" else "ABORTED")
+                self.assertEqual(result["status"], "UNVERIFIED" if variation in ("clean", "neutral_only") else "ABORTED")
 
     def test_speech_uses_hidden_local_standard_process_without_executing(self):
         with patch("research.countdown_motion_cue.subprocess.Popen") as launch, \
              patch("research.countdown_motion_cue.sys.platform", "win32"):
-            LocalSpeech("right", False)
+            LocalSpeech("right", "move")
         arguments, options = launch.call_args
         self.assertEqual(arguments[0][0], "powershell.exe")
         self.assertIn("System.Speech", arguments[0][-1])
@@ -183,6 +206,67 @@ class CountdownUnitTests(unittest.TestCase):
         self.assertEqual(options["stdout"], subprocess.DEVNULL)
         self.assertEqual(options["stderr"], subprocess.DEVNULL)
         self.assertTrue(options["creationflags"] & subprocess.CREATE_NO_WINDOW)
+        self.assertIn("体の向きを変えず", arguments[0][-1])
+        self.assertIn("静止してください", arguments[0][-1])
+
+    def test_all_local_speech_phrases_without_executing(self):
+        for stage in ("initial_neutral", "move", "return", "finish"):
+            with self.subTest(stage=stage), patch("research.countdown_motion_cue.subprocess.Popen") as launch:
+                LocalSpeech("right", stage)
+                script = launch.call_args.args[0][-1]
+                self.assertEqual("@(3,2,1)" in script, stage in ("move", "return"))
+                if stage == "initial_neutral": self.assertIn("楽に立ち", script)
+                if stage == "return": self.assertIn("元の位置へ戻ります", script)
+                if stage == "finish": self.assertIn("計測は終了", script)
+
+    def test_finish_runs_after_clean_child_exit_and_preserves_bounds(self):
+        for failure in ("none", "fault", "launch", "timeout", "deadline", "abort", "child_alive", "stop"):
+            clock, events, jobs = ManualClock(), [], []
+            def fake_probe(**kwargs):
+                self.assertEqual(kwargs["config"].consumer_hz, 60)
+                self.assertEqual(kwargs["config"].duration_seconds, 55)
+                controller = kwargs["command_source"]
+                controller.on_status(dict(cue="right", state="COMPLETE"))
+                events.append("child_exit")
+                clock.value = 58. if failure == "deadline" else 10.
+                return dict(status="ABORTED" if failure == "abort" else "PASS",
+                    motion=dict(state="COMPLETE"), child_exit_observed=failure != "child_alive",
+                    child_exit_code=0, result_ready=True, supervisor_reason="CHILD_EXIT",
+                    within_deadline=True, termination_requested=False, termination_error=False,
+                    invalid_packet_count=0, aggregate=dict(abort_reason="NONE",
+                        lifecycle=dict(sdk_close_successes=1)))
+            def factory(cue, stage):
+                self.assertEqual(events, ["child_exit"])
+                self.assertEqual(stage, "finish")
+                events.append(stage)
+                if failure == "launch":
+                    raise OSError("synthetic launch failure")
+                job = FakeSpeech(clock, 99. if failure in ("timeout", "deadline") else 0.,
+                                 2 if failure == "fault" else 0)
+                jobs.append(job)
+                return job
+            def advance(seconds): clock.value += seconds
+            with self.subTest(failure=failure), \
+                    patch("research.countdown_motion_cue.supervise_probe", side_effect=fake_probe), \
+                    patch("research.countdown_motion_cue.time.perf_counter", side_effect=clock), \
+                    patch("research.countdown_motion_cue.time.sleep", side_effect=advance):
+                report = run_countdown(sdk_root=Path("."), port=7690, process_id=os.getpid(),
+                    cue="right", user_ready=True, _speech_factory=factory,
+                    stop_source=lambda: "stop" if failure == "stop" else None)
+                self.assertLessEqual(report["total_elapsed_seconds_including_audio_cleanup"], 60)
+                self.assertTrue(all(job.cancelled for job in jobs))
+                if failure in ("abort", "child_alive", "stop"):
+                    self.assertEqual(events, ["child_exit"])
+                else:
+                    self.assertEqual(events, ["child_exit", "finish"])
+                expected_error = {"fault": "SPEECH_FAILED", "launch": "SPEECH_START_FAILED", "timeout": "SPEECH_TIMEOUT",
+                                  "deadline": "COUNTDOWN_DEADLINE", "stop": "USER_STOP"}.get(failure, "NONE")
+                self.assertEqual(report["countdown"]["error"], expected_error)
+                if failure == "none":
+                    self.assertEqual(report["status"], "UNVERIFIED")
+                    self.assertEqual(report["numerical_status"], "PASS")
+                elif failure in ("fault", "launch", "timeout", "deadline", "stop", "abort"):
+                    self.assertEqual(report["status"], "ABORTED")
 
 
 class CountdownWrapperTests(unittest.TestCase):
@@ -193,16 +277,21 @@ class CountdownWrapperTests(unittest.TestCase):
     """
     def run_case(self, *, mode="normal", delay=.01, speech_result=0,
                  launch_fail=False, user_stop=False):
-        jobs, states = [], []
+        jobs, states, stages = [], [], []
         children_before = {child.pid for child in multiprocessing.active_children()}
-        def factory(cue, returning):
+        def factory(cue, stage):
             self.assertEqual(cue, "right")
-            self.assertIn(states[-1], ("WAIT_HOLD", "WAIT_NEUTRAL"))
+            self.assertEqual(states[-1], {"initial_neutral": "WAIT_BASELINE", "move": "WAIT_HOLD",
+                                         "return": "WAIT_NEUTRAL", "finish": "COMPLETE"}[stage])
+            self.assertEqual(stage, ("initial_neutral", "move", "return", "finish")[len(stages)])
+            if stage == "finish":
+                self.assertEqual({child.pid for child in multiprocessing.active_children()}, children_before)
             self.assertTrue(all(job.poll() is not None for job in jobs))
             if launch_fail:
                 raise OSError("synthetic launch failure")
             job = SilentSpeech(delay, speech_result)
             jobs.append(job)
+            stages.append(stage)
             return job
         def stop_source():
             return "stop" if user_stop and jobs else None
@@ -220,6 +309,8 @@ class CountdownWrapperTests(unittest.TestCase):
             self.assertEqual({child.pid for child in multiprocessing.active_children()}, children_before)
             self.assertNotEqual(report["status"], "PASS")
             self.assertEqual(report["countdown"]["user_confirmation"], "PENDING")
+            self.assertEqual(report["countdown"]["completed_speech_stages"],
+                             stages[:report["countdown"]["speech_completed"]])
             return report
         finally:
             for job in jobs:
@@ -231,7 +322,8 @@ class CountdownWrapperTests(unittest.TestCase):
         self.assertEqual(report["motion"]["counts"], dict(baseline=60,held=20,returned=20))
         self.assertEqual(report["aggregate"]["abort_reason"], "NONE")
         self.assertFalse(report["termination_requested"])
-        self.assertEqual(report["countdown"]["speech_completed"], 2)
+        self.assertEqual(report["countdown"]["speech_completed"], 4)
+        self.assertEqual(report["aggregate"]["configuration"]["consumer_hz"], 60)
 
     def test_exact_wrapper_slow_speech_within_budget(self):
         report = self.run_case(delay=1.)
@@ -259,7 +351,8 @@ class CountdownWrapperTests(unittest.TestCase):
         report = self.run_case(mode="open_hang")
         self.assertTrue(report["termination_requested"])
         self.assertEqual(report["latest_checkpoint"]["stage"], "open_before")
-        self.assertEqual(report["countdown"]["speech_started"], 0)
+        self.assertLessEqual(report["countdown"]["speech_started"], 1)
+        self.assertNotIn("move", report["countdown"]["completed_speech_stages"])
 
     def test_exact_wrapper_sdk_close_hang(self):
         report = self.run_case(mode="close_hang")
@@ -280,7 +373,8 @@ class CountdownWrapperTests(unittest.TestCase):
     def test_exact_wrapper_late_input_stale_aborts_without_speech(self):
         report = self.run_case(mode="late")
         self.assertEqual(report["aggregate"]["abort_reason"], "STALE_LATEST_POSE")
-        self.assertEqual(report["countdown"]["speech_started"], 0)
+        self.assertLessEqual(report["countdown"]["speech_started"], 1)
+        self.assertNotIn("move", report["countdown"]["completed_speech_stages"])
 
     def test_exact_wrapper_burst_no_backlog_or_timestamp_replay(self):
         report = self.run_case(mode="burst")

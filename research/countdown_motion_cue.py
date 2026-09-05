@@ -29,7 +29,7 @@ from research.supervised_retarget_probe import (
 )
 
 _MOVE_PHRASES = {
-    "right": "右へ少し移動します。", "forward": "前へ少し移動します。",
+    "right": "体の向きを変えず、右へ少し移動します。", "forward": "体の向きを変えず、前へ少し移動します。",
     "crouch": "無理なく浅くしゃがみます。",
     "left_knee": "支えを使い左ひざを軽く曲げます。",
     "right_knee": "支えを使い右ひざを軽く曲げます。",
@@ -41,10 +41,21 @@ _MOVE_PHRASES = {
 
 class LocalSpeech:
     """Exactly one hidden, local standard Windows speech subprocess."""
-    def __init__(self, cue: str, returning: bool):
-        if sys.platform != "win32" or cue not in CUES:
+    def __init__(self, cue: str, stage: str):
+        if sys.platform != "win32" or cue not in CUES or stage not in ("initial_neutral", "move", "return", "finish"):
             raise ValueError("local speech unavailable")
-        phrase = "元の楽な姿勢へ戻ります。" if returning else _MOVE_PHRASES[cue]
+        phrase = {
+            "initial_neutral": "元の位置で楽に立ち、体の向きを保って静止してください。",
+            "move": _MOVE_PHRASES[cue],
+            "return": ("体の向きを変えず、元の位置へ戻ります。" if cue in ("right", "forward")
+                       else "元の位置と楽な姿勢へ戻ります。"),
+            "finish": "計測は終了です。楽にしてください。",
+        }[stage]
+        countdown = (
+            "foreach($n in @(3,2,1)){$s.Speak([string]$n);Start-Sleep -Milliseconds 700};"
+            "$s.Speak('どうぞ。その位置と姿勢で静止してください。');"
+            if stage in ("move", "return") else ""
+        )
         # Every interpolated word comes from the fixed phrases above, never user text.
         script = (
             "$ErrorActionPreference='Stop'; try {"
@@ -54,8 +65,7 @@ class LocalSpeech:
             "if($voices.Count -eq 0){exit 2}; $s.SelectVoice($voices[0].VoiceInfo.Name);"
             "$s.SetOutputToDefaultAudioDevice();"
             f"$s.Speak('{phrase}');"
-            "foreach($n in @(3,2,1)){$s.Speak([string]$n);Start-Sleep -Milliseconds 700};"
-            "$s.Speak('どうぞ。その姿勢を保ってください。');$s.Dispose();exit 0"
+            f"{countdown}$s.Dispose();exit 0"
             "}catch{exit 3}"
         )
         self.process = subprocess.Popen(
@@ -96,6 +106,7 @@ class CountdownCue:
         self.job = None
         self.job_started = self.settle_until = None
         self.speech_started = self.speech_completed = 0
+        self.completed_speech_stages = []
         self.commands_sent = 0
         self._stop_sent = False
 
@@ -126,6 +137,35 @@ class CountdownCue:
         self.commands_sent += 1
         return command
 
+    def start_speech(self, stage: str, now: float) -> None:
+        try:
+            if self.job is not None and not self.job.close(0):
+                self._fail("SPEECH_CLEANUP_FAILED")
+                return
+            self.job = self.speech_factory(self.cue, stage)
+            self.speech_started += 1
+            self.job_started, self.speech_stage = now, stage
+        except Exception:
+            self._fail("SPEECH_START_FAILED")
+
+    def speech_done(self, now: float) -> bool:
+        # A late successful poll is still too late; never manufacture a boundary.
+        if now - self.job_started >= 12:
+            self._fail("SPEECH_TIMEOUT")
+            return False
+        try:
+            result = self.job.poll()
+        except Exception:
+            result = -1
+        if result is None:
+            return False
+        if result != 0:
+            self._fail("SPEECH_FAILED")
+            return False
+        self.speech_completed += 1
+        self.completed_speech_stages.append(self.speech_stage)
+        return True
+
     def __call__(self) -> Optional[str]:
         now = self.clock()
         if type(now) not in (int, float) or not math.isfinite(now) or now < self._last_time:
@@ -145,6 +185,11 @@ class CountdownCue:
             self._fail("COUNTDOWN_DEADLINE")
             return self()
         if self.phase == "WAIT_BASELINE" and self.state == "WAIT_BASELINE":
+            self.start_speech("initial_neutral", now)
+            if self.error != "NONE":
+                return self()
+            self.phase = "INITIAL_SPEECH"
+        if self.phase == "INITIAL_SETTLE" and now >= self.settle_until:
             return self._command("baseline", "WAIT_READY_MOVE")
         if self.phase == "WAIT_READY_MOVE" and self.state == "READY_MOVE":
             if now - self.started >= 45:
@@ -157,32 +202,17 @@ class CountdownCue:
         if ((self.phase == "WAIT_MOVE_ACCEPTED" and self.state == "WAIT_HOLD")
                 or (self.phase == "WAIT_RETURN_ACCEPTED" and self.state == "WAIT_NEUTRAL")):
             returning = self.phase == "WAIT_RETURN_ACCEPTED"
-            try:
-                if self.job is not None and not self.job.close(0):
-                    raise RuntimeError
-                self.job = self.speech_factory(self.cue, returning)
-                self.speech_started += 1
-                self.job_started = now
-                self.phase = "RETURN_SPEECH" if returning else "MOVE_SPEECH"
-            except Exception:
-                self._fail("SPEECH_START_FAILED")
+            self.start_speech("return" if returning else "move", now)
+            if self.error != "NONE":
                 return self()
-        if self.phase in ("MOVE_SPEECH", "RETURN_SPEECH"):
-            # A late successful poll is still too late; never manufacture a boundary.
-            if now - self.job_started >= 12:
-                self._fail("SPEECH_TIMEOUT")
+            self.phase = "RETURN_SPEECH" if returning else "MOVE_SPEECH"
+        if self.phase in ("INITIAL_SPEECH", "MOVE_SPEECH", "RETURN_SPEECH"):
+            done = self.speech_done(now)
+            if self.error != "NONE":
                 return self()
-            try:
-                result = self.job.poll()
-            except Exception:
-                result = -1
-            if result is not None:
-                if result != 0:
-                    self._fail("SPEECH_FAILED")
-                    return self()
-                self.speech_completed += 1
+            if done:
                 self.settle_until = now + 4
-                self.phase = "RETURN_SETTLE" if self.phase == "RETURN_SPEECH" else "MOVE_SETTLE"
+                self.phase = self.phase.replace("SPEECH", "SETTLE")
         if self.phase == "MOVE_SETTLE" and now >= self.settle_until:
             return self._command("hold", "WAIT_READY_RETURN")
         if self.phase == "RETURN_SETTLE" and now >= self.settle_until:
@@ -204,6 +234,7 @@ class CountdownCue:
     def evidence(self) -> dict:
         return {"marker_source": "SCHEDULED_COUNTDOWN", "user_confirmation": "PENDING",
                 "speech_started": self.speech_started, "speech_completed": self.speech_completed,
+                "completed_speech_stages": list(self.completed_speech_stages),
                 "commands_sent": self.commands_sent, "error": self.error,
                 "speech_audibility": "UNVERIFIED"}
 
@@ -226,9 +257,39 @@ def run_countdown(*, sdk_root: Path, port: int, process_id: int, cue: str,
         if remaining < 56:
             raise ValueError("insufficient supervised observation budget")
         report = supervise_probe(sdk_root=sdk_root, port=port, process_id=process_id,
-            config=ProbeConfig(duration_seconds=55), hard_timeout_seconds=remaining,
+            config=ProbeConfig(duration_seconds=55, consumer_hz=60), hard_timeout_seconds=remaining,
             motion_cue=cue, command_source=controller, status_observer=status,
             _sdk_loader=_sdk_loader)
+        aggregate = report.get("aggregate") or {}
+        life = aggregate.get("lifecycle", {})
+        # Completion speech describes the ended capture, never semantic PASS.
+        # It starts only after the SDK child has exited normally, inside the
+        # original overall deadline; failures do not launch another body cue.
+        if (controller.error == "NONE" and controller.state == "COMPLETE"
+                and (report.get("motion") or {}).get("state") == "COMPLETE"
+                and aggregate.get("abort_reason") == "NONE"
+                and life.get("sdk_close_successes") == 1
+                and report.get("status") != "ABORTED"
+                and report.get("child_exit_observed") is True and report.get("child_exit_code") == 0
+                and report.get("result_ready") is True and report.get("supervisor_reason") == "CHILD_EXIT"
+                and report.get("within_deadline") is True and not report.get("termination_requested")
+                and not report.get("termination_error") and report.get("invalid_packet_count") == 0):
+            if stop_source() is not None:
+                controller._fail("USER_STOP")
+            elif time.perf_counter() >= started + 59.5:
+                controller._fail("COUNTDOWN_DEADLINE")
+            else:
+                controller.start_speech("finish", time.perf_counter())
+                while controller.error == "NONE":
+                    now = time.perf_counter()
+                    if stop_source() is not None:
+                        controller._fail("USER_STOP")
+                    elif now >= started + 59.5:
+                        controller._fail("COUNTDOWN_DEADLINE")
+                    elif controller.speech_done(now):
+                        break
+                    else:
+                        time.sleep(min(.01, max(0., started + 59.5 - now)))
     finally:
         audio_exit = controller.close(max(0., min(.4, started + 60 - time.perf_counter())))
     elapsed = time.perf_counter() - started
@@ -242,7 +303,10 @@ def run_countdown(*, sdk_root: Path, port: int, process_id: int, cue: str,
     # A scheduled timeout with no input is an absence of evidence, not evidence
     # of bad motion. Do not reclassify explicit stops, SDK faults or forced exit.
     empty_clean_timeout = (
-        controller.error == "COUNTDOWN_DEADLINE" and controller.speech_started == 0
+        controller.error == "COUNTDOWN_DEADLINE"
+        and (controller.speech_started == 0 or (
+            controller.speech_started == controller.speech_completed == 1
+            and controller.completed_speech_stages == ["initial_neutral"]))
         and counts.get("callbacks_received") == 0
         and aggregate.get("abort_reason") == "USER_STOP"
         and life.get("sdk_open_successes") == 1 and life.get("sdk_close_successes") == 1
