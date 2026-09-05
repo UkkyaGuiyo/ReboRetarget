@@ -1,10 +1,10 @@
 # Live ReboCap Adapter Safety Protocol
 
-Status: **TWO AUTHORIZED ATTEMPTS / LATEST ABORTED / PHASE 2E UNVERIFIED**
+Status: **PHASE 2E UNVERIFIED / AUTONOMOUS RECOVERY AUTHORIZED WITH GATES**
 
-Latest user override: the retry Safe Point requires the same running ReboCap process, VRChat zero, SteamVR zero, and no ReboCap setting change. Existing Virtual Desktop Service/Streamer and established TCP connections are allowed and must be left unchanged. Their existence alone is not a blocker or FAIL. This explicit instruction supersedes conflicting natural-Safe-Point/session clauses below for this retry. The retry is now consumed and yielded no final aggregate; see `PHASE_2E_RETRY_REPORT.md`. A third connection requires new authorization.
+Latest user authority: `AUTONOMOUS_ENGINEERING_AUTHORITY.md` permits at most three sequential bounded retries in one recorded Phase 2E investigation cycle, after offline recovery tests and review. Each retry requires a code change or new hypothesis; there is no reconnect loop. The Safe Point requires the same running ReboCap process, VRChat zero, SteamVR zero, and no ReboCap setting/calibration change. Existing Virtual Desktop Service/Streamer and established TCP connections are allowed and must be left unchanged. Their existence alone is not a blocker or FAIL.
 
-This is the preflight and evidence contract for a short Phase 2E receive-only validation. The user authorized one run on 2026-09-05. The official SDK connection opened and closed successfully, but no Pose callback arrived during 20.015 seconds, so the live value path remains `UNVERIFIED`; see [`LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md`](LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md). This document grants no continuing permission to touch a live system. VRChat crashed during the earlier additional-SDK-client observation; whether that client contributed to the crash remains unresolved.
+This is the preflight and evidence contract for short Phase 2E receive-only validation. The first authorized run opened and closed successfully but received zero callbacks; the second was aborted without an aggregate. See `LIVE_REBOCAP_ADAPTER_VALIDATION_REPORT.md` and `PHASE_2E_RETRY_REPORT.md`. These historical outcomes do not prove the current SDK state. VRChat crashed during an earlier additional-SDK-client observation; causality remains unresolved.
 
 ## Evidence labels
 
@@ -16,13 +16,13 @@ This is the preflight and evidence contract for a short Phase 2E receive-only va
 
 Every item must be confirmed immediately before a future connection:
 
-- ReboCap is already running and calibrated by the user.
+- ReboCap is already running with its protected process identity preserved; no configuration/calibration operation is required.
 - VRChat is not running.
 - SteamVR is not running.
-- No active VR session exists.
-- The user explicitly authorizes this one bounded run after seeing the preflight result.
+- The standing-permission cycle has attempts remaining and this attempt has a documented change/new hypothesis.
+- Offline-tested child isolation, aggregate recovery, and parent hard deadline are present.
 
-Codex may inspect process state read-only. It must never create this state by starting, stopping, restarting, foregrounding, or configuring an application. A Virtual Desktop background service is not by itself an active VR session, but it is evaluated separately; if service state, headset/session state, or any other prerequisite is ambiguous, the run fails closed and does not connect.
+Codex may inspect process state read-only. It must not create this state by starting, stopping, restarting, foregrounding, or configuring an application. Virtual Desktop background processes/connections are recorded and permitted. Unknown visible skeleton/calibration/broadcast state remains UNVERIFIED; do not operate calibration or infer that a listener proves Pose output.
 
 ## Fixed boundaries
 
@@ -30,19 +30,19 @@ Codex may inspect process state read-only. It must never create this state by st
 - Use only an endpoint explicitly verified for this run. Do not scan ports, probe alternatives, or guess an incremented port.
 - Load the official SDK only from a separately obtained, explicitly supplied local path. Do not discover broadly, copy, bundle, edit, or commit the SDK or its files; do not record the local path in repository artifacts.
 - ReboRetarget code performs no OSC send, UDP send, or direct socket send. The sole future-authorized communication is the official SDK wrapper's documented receive-client connection to the verified endpoint. No sender, raw socket API, or packet transport is added.
-- Do not change any VR, process, ReboCap setting, calibration, native-output state, UI, tracker, or device state.
+- Do not change any VR application, ReboCap setting, calibration, native-output state, UI, tracker, or device state. Starting the owned probe child and terminating only that child on timeout are the explicit exceptions.
 - Do not retain or write raw Pose values. The capacity-one handoff may hold only the current in-memory value during the run and must clear it on invalidation/close. Persist only aggregate counts, timings, and sanitized pass/fail evidence.
 - Do not automatically reconnect. Do not run Phase 2F body-motion validation or contact VRChat, SteamVR, Virtual Desktop, or Quest.
-- Maximum connected observation time is 60 seconds. There is no automatic extension.
+- Maximum total supervised attempt time is 60 seconds, with a shorter observation and reserved cleanup time. There is no automatic extension; an unverified termination is not PASS.
 
 ## Preflight checklist
 
 Record each item as `CONFIRMED`, `INFERRED`, or `UNVERIFIED`; every required item must be `CONFIRMED` before connection.
 
-1. User authorization identifies one run and has not been withdrawn.
-2. ReboCap is already running and the user confirms action calibration is complete.
+1. Standing permission has not been withdrawn, fewer than three attempts were used in this cycle, and a changed code path/new hypothesis is recorded.
+2. ReboCap is already running with protected process identity; calibration and settings remain untouched. Record broadcast/calibration state without guessing.
 3. VRChat and SteamVR are absent by read-only process inspection.
-4. The user confirms no active VR session; Virtual Desktop background-service state is recorded separately.
+4. Virtual Desktop state is recorded separately and left unchanged; its processes/connections do not veto the revised gate.
 5. A single-client test is possible without displacing an existing external SDK client.
 6. The exact endpoint and official SDK local path were supplied and verified without scanning; neither local value is committed or copied.
 7. The 60-second limit, stale threshold, Quaternion unit tolerance, and abort observer are fixed in the run record before connection.
@@ -57,13 +57,13 @@ Any `UNVERIFIED`, conflicting, or ambiguous prerequisite means no connection.
 3. For each callback, validate exactly 24 finite Quaternions, the predeclared unit tolerance, finite Pelvis translation, and source/receive timestamp order before accepting it.
 4. Pass only the newest valid value through the live adapter, target FK, semantic anchors, VRChat representation, and OSC encode/decode in memory. A capacity-one handoff overwrites older work; it never queues a backlog.
 5. Measure callback and accepted-value counts, timestamp monotonicity, overwrite/drop counts, invalidation behavior, and end-to-end processing p50/p95/p99. Do not log a Pose or Euler/position stream.
-6. At 60 seconds or an earlier abort, close only this SDK client, clear the latest value, and stop. Do not clean up, restart, or repair any application.
+6. Close only this SDK client at normal completion or an earlier abort. Parent deadline covers import/construction/open/observation/close; on timeout terminate only the owned child and retain partial aggregate/checkpoint evidence. Do not clean up, restart, or repair any application.
 
 ## Immediate aborts
 
 Abort on the first occurrence of any of these conditions:
 
-- VRChat, SteamVR, or another unexpected scoped process starts, or an active VR session appears.
+- VRChat or SteamVR starts, or the user begins VR activity.
 - The official SDK reports an error or abnormal close.
 - A Pose does not contain exactly 24 rotations.
 - Any Pose component is non-finite, or any Quaternion is outside the predeclared unit tolerance.
@@ -73,7 +73,7 @@ Abort on the first occurrence of any of these conditions:
 - The user begins VR activity, withdraws permission, or asks Codex to stop.
 - Endpoint, client ownership, process/session state, data meaning, or safety becomes ambiguous.
 
-The only abort action is to close this SDK client immediately, clear its in-memory latest value, and record the sanitized reason. Never stop, restart, foreground, configure, or otherwise clean up an application. Never reconnect automatically.
+Abort closes this SDK client and clears its in-memory latest value when responsive; the parent may terminate only its owned child on timeout or safety withdrawal. Record the sanitized reason and whether cleanup completed. Never stop, restart, foreground, configure, or otherwise clean up an application. Never reconnect automatically.
 
 ## Acceptance gate
 
@@ -114,6 +114,6 @@ Multi-client: UNVERIFIED / NOT RUN
 Phase 2F body-motion execution: NOT RUN
 ```
 
-## Authorization required next
+## Recovery authority
 
-The pure/offline capacity-one latest-pose state primitive is complete. The first authorized Phase 2E attempt returned zero callbacks; the second was aborted without an aggregate and did not establish callback count. Fix and test the documented probe timing/lifecycle gaps offline before another run. Any third connection requires new explicit authorization. Virtual Desktop background processes/connections remain permitted under the latest user override and must not be terminated or changed. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS.
+The pure/offline capacity-one latest-pose state primitive is complete. Fix and regression-test the documented clock and lifecycle gaps, run independent review, then use only the bounded standing permission defined in `AUTONOMOUS_ENGINEERING_AUTHORITY.md` when its gate holds. Record attempt usage and evidence in the recovery report. Phase 2F-A remains separately unauthorized and blocked on Phase 2E PASS. No recovery work authorizes OSC output or VR application operations.

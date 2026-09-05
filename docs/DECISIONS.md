@@ -194,6 +194,10 @@ Status terms: **Accepted** is binding until explicitly superseded; **Open** is n
 
 The user explicitly revised the retry Safe Point to require the same already-running ReboCap process, no VRChat, no SteamVR, and no ReboCap setting change. Existing Virtual Desktop Service/Streamer and their established TCP connection are permitted environmental variables; their presence alone must not block or fail this retry. No further Virtual Desktop termination or configuration operation is allowed. The override authorized one receive-only retry, now consumed; it grants no third connection, reconnect, OSC output, or Phase 2F-A execution. The retry was aborted without an aggregate result; see `PHASE_2E_RETRY_REPORT.md`.
 
+### D-029 — Autonomous recovery with bounded standing permission
+
+The historical D-027 one-run gate and run-specific override above are superseded for Phase 2E recovery by the user's `AUTONOMOUS_ENGINEERING_AUTHORITY.md`: useful offline recovery is autonomous; at most three sequential, changed-hypothesis Live attempts in one recorded cycle are permitted only after offline watchdog tests and the revised Safe Point. This is an accepted authority change, not a Phase 2E PASS. Protected settings, Virtual Desktop preservation, no output send, legal boundaries, and separately gated Phase 2F-A remain unchanged.
+
 ## Open decisions
 
 - Programming language, runtime, GUI toolkit, packaging, and supported Windows versions.

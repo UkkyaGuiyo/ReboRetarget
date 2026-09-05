@@ -17,6 +17,7 @@ Treat these files as the repository's durable project memory:
 5. `docs/RESEARCH_LOG.md` — evidence, failures, rejected ideas, and open research.
 6. `docs/INTERFACE_CONTRACT.md` — confirmed external boundaries and the next PoC acceptance gate.
 7. `docs/QUEST_CHEST_YAW_ANCHOR.md` — optional future research, separate from the core MVP.
+8. `docs/AUTONOMOUS_ENGINEERING_AUTHORITY.md` — accepted autonomous-work levels and bounded Phase 2E recovery permission; read before any new live investigation.
 
 If these documents disagree, prefer the user's latest explicit instruction, then the original request, then accepted decisions, then verified real-environment evidence, then `CURRENT_STATE`, and finally older plans or notes. Do not silently delete a conflict; resolve it from evidence or record it as unresolved.
 
