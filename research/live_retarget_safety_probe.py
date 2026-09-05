@@ -47,6 +47,7 @@ from tests.synthetic_fixtures import synthetic_human_skeleton
 Clock = Callable[[], float]
 Waiter = Callable[[threading.Event, float], None]
 ProcessGuard = Callable[[int], bool]
+Progress = Callable[[dict[str, Any]], None]
 
 
 class AbortReason(str, Enum):
@@ -72,6 +73,7 @@ class AbortReason(str, Enum):
     STALE_LATEST_POSE = "STALE_LATEST_POSE"
     PIPELINE_ERROR = "PIPELINE_ERROR"
     CLOCK_REGRESSION = "CLOCK_REGRESSION"
+    PROGRESS_REPORT_FAILED = "PROGRESS_REPORT_FAILED"
 
 
 def _finite(value: Any, label: str) -> float:
@@ -204,7 +206,7 @@ COUNT_NAMES = (
 class LiveRetargetSafetyProbe:
     """Callback validation, capacity-one handoff, and aggregate evidence."""
 
-    def __init__(self, config: ProbeConfig, *, clock: Clock = time.monotonic) -> None:
+    def __init__(self, config: ProbeConfig, *, clock: Clock = time.perf_counter) -> None:
         self.config, self._clock = config, clock
         self._lock, self._callback_lock = threading.Lock(), threading.Lock()
         self.wake = threading.Event()
@@ -219,6 +221,7 @@ class LiveRetargetSafetyProbe:
         self._normal_deadline_reached = self._natural_disconnect_seen = False
         self._run_started = self._close_started = None
         self._last_receive = self._first_accepted = self._last_accepted = None
+        self._first_callback = None
         self._last_source = None
         self._last_receive_was_gap = False
         self._last_snapshotted_sequence = 0
@@ -281,7 +284,6 @@ class LiveRetargetSafetyProbe:
                 self._accepting = False
 
     def record_sdk_open_result(self, result: Any) -> bool:
-        self.lifecycle["sdk_open_attempts"] += 1
         if isinstance(result, bool) or not isinstance(result, int):
             return False
         self.lifecycle["sdk_open_result_code"] = result
@@ -338,6 +340,8 @@ class LiveRetargetSafetyProbe:
             return
         with self._lock:
             self.counts["callbacks_received"] += 1
+            if self._first_callback is None:
+                self._first_callback = receive
             if not self._accepting:
                 self.counts["late_callbacks_rejected"] += 1
                 return
@@ -541,6 +545,14 @@ class LiveRetargetSafetyProbe:
                 if self._run_started is not None and self._close_started is not None
                 else None
             )
+            first_callback_delay = (
+                self._first_callback - self._run_started
+                if self._first_callback is not None and self._run_started is not None
+                else None
+            )
+            last_callback_age = (
+                self._clock() - self._last_receive if self._last_receive is not None else None
+            )
             natural_disconnect = self._natural_disconnect_seen
             abort, normal = self._abort_reason, self._normal_deadline_reached
             timing = {name: value.summary() for name, value in self.histograms.items()}
@@ -602,6 +614,12 @@ class LiveRetargetSafetyProbe:
             "process_alive_start": self.process_alive_start,
             "process_alive_end": self.process_alive_end,
             "observation_duration_seconds": round(duration, 6) if duration is not None else None,
+            "first_callback_delay_seconds": (
+                round(first_callback_delay, 6) if first_callback_delay is not None else None
+            ),
+            "last_callback_age_seconds": (
+                round(last_callback_age, 6) if last_callback_age is not None else None
+            ),
             "natural_disconnect": "TRIGGERED" if natural_disconnect else "NOT_TRIGGERED",
             "external_disconnect_evidence": (
                 "CONFIRMED" if natural_disconnect else "UNVERIFIED / NOT OBSERVED"
@@ -684,13 +702,38 @@ def _default_wait(event: threading.Event, timeout: float) -> None:
 
 def execute_probe(
     sdk_module: Any, *, port: int, process_id: int, config: ProbeConfig,
-    clock: Clock = time.monotonic, waiter: Waiter = _default_wait,
+    clock: Clock = time.perf_counter, waiter: Waiter = _default_wait,
     process_guard: ProcessGuard = process_alive,
     stop_event: Optional[threading.Event] = None,
+    progress: Optional[Progress] = None,
 ) -> dict[str, Any]:
-    """Open one SDK client once, run the bounded probe, and close it once."""
+    """Open and close once; native-call deadlines require an external supervisor.
+
+    All timing uses one injected high-resolution monotonic clock domain. Optional
+    progress events contain only fixed labels and aggregate measurements, never
+    source timestamps, motion values, SDK diagnostics, or exception text.
+    """
     probe = LiveRetargetSafetyProbe(config, clock=clock)
     stop, sdk, run_started = stop_event or threading.Event(), None, None
+    execution_started = clock()
+
+    def checkpoint(stage: str, *, final: bool = False) -> None:
+        if progress is None:
+            return
+        try:
+            report = probe.aggregate_result()
+            if not final and report["status"] != "ABORTED":
+                report["status"] = "IN_PROGRESS"
+            progress({
+                "schema": "reboretarget.phase2e.progress.v1",
+                "stage": stage,
+                "elapsed_seconds": round(max(0.0, clock() - execution_started), 6),
+                "aggregate": report,
+            })
+        except Exception:
+            # An observer failure must not bypass the SDK cleanup boundary.
+            probe._abort(AbortReason.PROGRESS_REPORT_FAILED)
+
     try:
         try:
             probe.process_alive_start = probe.process_alive_end = bool(process_guard(process_id))
@@ -700,7 +743,10 @@ def execute_probe(
             probe._abort(AbortReason.PROCESS_NOT_ALIVE)
         if probe.abort_reason is AbortReason.NONE:
             probe.lifecycle["sdk_constructor_attempts"] += 1
+            checkpoint("construct_before")
             try:
+                if probe.abort_reason is not AbortReason.NONE:
+                    raise _InputError(probe.abort_reason)
                 sdk = sdk_module.RebocapWsSdk(
                     coordinate_type=sdk_module.CoordinateType.UnityCoordinate,
                     use_global_rotation=True,
@@ -708,25 +754,36 @@ def execute_probe(
                 probe.lifecycle["sdk_client_instances"] += 1
             except Exception:
                 probe._abort(AbortReason.SDK_CONSTRUCTION_FAILED)
+            checkpoint("construct_after")
         if probe.abort_reason is AbortReason.NONE:
+            checkpoint("registration_before")
             try:
+                if probe.abort_reason is not AbortReason.NONE:
+                    raise _InputError(probe.abort_reason)
                 sdk.set_pose_msg_callback(probe.on_pose)
                 sdk.set_exception_close_callback(probe.on_sdk_close)
             except Exception:
                 probe._abort(AbortReason.SDK_CALLBACK_REGISTRATION_FAILED)
+            checkpoint("registration_after")
         if probe.abort_reason is AbortReason.NONE:
             try:
                 run_started = _finite(clock(), "run_started")
                 probe.record_run_start(run_started)
+                probe.lifecycle["sdk_open_attempts"] += 1
+                checkpoint("open_before")
+                if probe.abort_reason is not AbortReason.NONE:
+                    raise _InputError(probe.abort_reason)
                 result = sdk.open(port)
             except Exception:
-                probe.lifecycle["sdk_open_attempts"] += 1
                 probe._abort(AbortReason.SDK_OPEN_FAILED)
             else:
                 if not probe.record_sdk_open_result(result):
                     probe._abort(AbortReason.SDK_OPEN_FAILED)
+            checkpoint("open_after")
         if probe.abort_reason is AbortReason.NONE:
             deadline, period = run_started + config.duration_seconds, 1.0 / config.consumer_hz
+            checkpoint("observe_start")
+            next_heartbeat = clock() + 1.0
             while probe.abort_reason is AbortReason.NONE:
                 if stop.is_set():
                     probe.request_user_stop()
@@ -746,6 +803,9 @@ def execute_probe(
                     break
                 if now >= deadline:
                     break
+                if now >= next_heartbeat:
+                    checkpoint("heartbeat")
+                    next_heartbeat = now + 1.0
                 probe.wake.clear()
                 probe.process_latest()
                 remaining = deadline - _finite(clock(), "loop_monotonic")
@@ -765,14 +825,18 @@ def execute_probe(
                         probe.finish_normal_observation()
     finally:
         if sdk is not None:
+            checkpoint("pre_close")
             probe.record_close_start(clock())
             probe.lifecycle["sdk_close_attempts"] += 1
+            checkpoint("close_before")
             try:
                 sdk.close()
                 probe.lifecycle["sdk_close_successes"] += 1
             except Exception:
                 probe._abort(AbortReason.SDK_CLOSE_FAILED)
+            checkpoint("close_after")
         probe.finish_disconnected_clear()
+    checkpoint("complete", final=True)
     return probe.aggregate_result()
 
 
@@ -822,7 +886,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             rebocap_ws_sdk, port=args.port, process_id=args.process_id,
             config=args.config, stop_event=stop,
         )
-    print("RESULT_JSON=" + json.dumps(report, sort_keys=True, separators=(",", ":")))
+    print("RESULT_JSON=" + json.dumps(report, sort_keys=True, separators=(",", ":")), flush=True)
     return 0 if report["status"] == "PASS" else 1
 
 

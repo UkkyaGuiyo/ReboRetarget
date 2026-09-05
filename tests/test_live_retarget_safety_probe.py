@@ -9,6 +9,7 @@ import json
 import math
 from pathlib import Path
 import threading
+import time
 import unittest
 
 from research.live_retarget_safety_probe import (
@@ -481,6 +482,187 @@ class DurationPrivacyAndBoundaryTests(unittest.TestCase):
             and node.func.id == "open"
         ]
         self.assertEqual(builtin_file_opens, [])
+
+
+class RecoveryClockAndProgressTests(unittest.TestCase):
+    def test_both_default_clocks_are_the_same_high_resolution_clock(self):
+        self.assertIs(LiveRetargetSafetyProbe.__init__.__kwdefaults__["clock"], time.perf_counter)
+        self.assertIs(execute_probe.__kwdefaults__["clock"], time.perf_counter)
+
+    def test_coarse_clock_reproduces_false_tie_without_fabricated_timestamps(self):
+        precise = ManualClock(1.0)
+        coarse = lambda: math.floor(precise() * 64.0) / 64.0
+        old_probe = LiveRetargetSafetyProbe(ProbeConfig(), clock=coarse)
+        fixed_probe = LiveRetargetSafetyProbe(ProbeConfig(), clock=precise)
+        for sequence in range(120):
+            precise.advance(1.0 / 120.0)
+            for probe in (old_probe, fixed_probe):
+                probe.on_pose(None, VALID_ROOT, IDENTITY_POSE, -1, sequence / 120.0)
+        self.assertEqual(old_probe.abort_reason, AbortReason.RECEIVE_TIMESTAMP_ORDER)
+        self.assertEqual(fixed_probe.abort_reason, AbortReason.NONE)
+        self.assertEqual(fixed_probe.aggregate_result()["counts"]["publish_accepted"], 120)
+
+    def test_synthetic_rates_and_one_second_consumer_stall_keep_only_latest(self):
+        for producer_hz in (60, 120):
+            with self.subTest(producer_hz=producer_hz):
+                clock = ManualClock(1.0)
+                probe = LiveRetargetSafetyProbe(ProbeConfig(), clock=clock)
+                for sequence in range(1, producer_hz + 1):
+                    clock.advance(1.0 / producer_hz)
+                    probe.on_pose(None, VALID_ROOT, IDENTITY_POSE, -1, sequence / producer_hz)
+                # The consumer has been absent for a whole second, but the last
+                # producer value is fresh. No backlog may be replayed on return.
+                probe.process_latest()
+                probe.process_latest()
+                report = probe.aggregate_result()
+                self.assertEqual(report["abort_reason"], "NONE")
+                self.assertEqual(report["counts"]["publish_accepted"], producer_hz)
+                self.assertEqual(report["counts"]["processed_unique_sequences"], 1)
+                self.assertEqual(report["counts"]["sequence_gap_drops"], producer_hz - 1)
+
+    def test_real_thread_60hz_120hz_and_burst_with_consumer_stall(self):
+        # This is an ordering/handoff test, not an OS scheduling benchmark.
+        for producer_hz, frame_count in ((60, 12), (120, 24), (None, 120)):
+            with self.subTest(producer_hz=producer_hz):
+                probe = LiveRetargetSafetyProbe(ProbeConfig(stale_after_seconds=2.0))
+                done, cancelled = threading.Event(), threading.Event()
+
+                def producer():
+                    try:
+                        started = time.perf_counter()
+                        for sequence in range(frame_count):
+                            if cancelled.is_set():
+                                return
+                            if producer_hz is not None:
+                                cancelled.wait(max(0.0, started + sequence / producer_hz - time.perf_counter()))
+                            probe.on_pose(None, VALID_ROOT, IDENTITY_POSE, -1, sequence / 120.0)
+                    finally:
+                        done.set()
+
+                worker = threading.Thread(target=producer, daemon=True)
+                worker.start()
+                try:
+                    cancelled.wait(0.080)  # Producer keeps replacing while consumer stalls.
+                    deadline = time.perf_counter() + 3.0
+                    while not done.is_set() and time.perf_counter() < deadline:
+                        probe.process_latest()
+                        done.wait(1.0 / 30.0)
+                    worker.join(timeout=0.5)
+                    self.assertFalse(worker.is_alive())
+                    probe.process_latest()
+                    report = probe.aggregate_result()
+                    self.assertEqual(report["abort_reason"], "NONE")
+                    self.assertEqual(report["counts"]["publish_accepted"], frame_count)
+                    self.assertEqual(report["counts"]["receive_order_rejections"], 0)
+                    self.assertEqual(report["counts"]["source_order_rejections"], 0)
+                    self.assertGreater(report["counts"]["sequence_gap_drops"], 0)
+                    self.assertEqual(
+                        report["counts"]["processed_unique_sequences"] + report["counts"]["sequence_gap_drops"],
+                        frame_count,
+                    )
+                finally:
+                    cancelled.set()
+                    worker.join(timeout=0.5)
+
+    def test_lifecycle_heartbeat_pre_close_and_first_callback_are_aggregate_only(self):
+        clock, sdk_module, events = ManualClock(), FakeSdkModule(), []
+        report = execute_probe(
+            sdk_module, port=54321, process_id=98765,
+            config=ProbeConfig(duration_seconds=2.0), clock=clock,
+            waiter=TwoPosePerConsumerWait(sdk_module, clock),
+            process_guard=lambda _pid: True, progress=events.append,
+        )
+        self.assertEqual([event["stage"] for event in events], [
+            "construct_before", "construct_after", "registration_before", "registration_after",
+            "open_before", "open_after", "observe_start", "heartbeat", "pre_close",
+            "close_before", "close_after", "complete",
+        ])
+        pre_close = next(event["aggregate"] for event in events if event["stage"] == "pre_close")
+        self.assertEqual(pre_close["status"], "IN_PROGRESS")
+        self.assertGreaterEqual(pre_close["counts"]["publish_accepted"], 100)
+        self.assertEqual(pre_close["lifecycle"]["sdk_close_successes"], 0)
+        open_before = next(event["aggregate"] for event in events if event["stage"] == "open_before")
+        self.assertEqual(open_before["lifecycle"]["sdk_open_attempts"], 1)
+        self.assertEqual(open_before["lifecycle"]["sdk_open_successes"], 0)
+        self.assertEqual(events[-1]["aggregate"], report)
+        self.assertEqual(report["status"], "PASS")
+        self.assertAlmostEqual(report["lifecycle"]["first_callback_delay_seconds"], 1.0 / 60.0, places=6)
+        self.assertEqual(report["lifecycle"]["last_callback_age_seconds"], 0.0)
+        serialized = json.dumps(events)
+        for private_value in ("54321", "98765", "1000.0", "1.0, 0.0, 0.0, 0.0"):
+            self.assertNotIn(private_value, serialized)
+        self.assertTrue(all(event["aggregate"]["status"] != "PASS" for event in events[:-1]))
+
+    def test_pre_close_aggregate_is_available_while_fake_close_blocks(self):
+        clock, sdk_module, events = ManualClock(), FakeSdkModule(), []
+        release, closing = threading.Event(), threading.Event()
+        original_constructor = sdk_module.RebocapWsSdk
+
+        def constructor(**kwargs):
+            sdk = original_constructor(**kwargs)
+            original_close = sdk.close
+
+            def blocked_close():
+                closing.set()
+                release.wait(3.0)
+                original_close()
+
+            sdk.close = blocked_close
+            return sdk
+
+        sdk_module.RebocapWsSdk = constructor
+        reports = []
+        worker = threading.Thread(target=lambda: reports.append(execute_probe(
+            sdk_module, port=7690, process_id=123,
+            config=ProbeConfig(duration_seconds=2.0), clock=clock,
+            waiter=TwoPosePerConsumerWait(sdk_module, clock),
+            process_guard=lambda _pid: True, progress=events.append,
+        )), daemon=True)
+        worker.start()
+        try:
+            self.assertTrue(closing.wait(2.0))
+            self.assertEqual(reports, [])
+            self.assertEqual(events[-1]["stage"], "close_before")
+            self.assertEqual(events[-1]["aggregate"]["status"], "IN_PROGRESS")
+            self.assertGreater(events[-1]["aggregate"]["counts"]["publish_accepted"], 100)
+            self.assertEqual(events[-1]["aggregate"]["lifecycle"]["sdk_close_successes"], 0)
+        finally:
+            release.set()
+            worker.join(timeout=2.0)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(reports[0]["status"], "PASS")
+
+    def test_progress_failure_is_sanitized_and_does_not_open_client(self):
+        sdk_module = FakeSdkModule()
+
+        def broken_progress(_event):
+            raise RuntimeError("private diagnostic must never escape")
+
+        report = execute_probe(
+            sdk_module, port=7690, process_id=123, config=ProbeConfig(),
+            process_guard=lambda _pid: True, progress=broken_progress,
+        )
+        self.assertEqual(report["abort_reason"], "PROGRESS_REPORT_FAILED")
+        self.assertEqual(sdk_module.constructor_calls, 0)
+        self.assertEqual(sdk_module.open_calls, 0)
+        self.assertNotIn("private diagnostic", json.dumps(report))
+
+    def test_heartbeat_last_callback_age_and_no_callback_are_distinct(self):
+        clock, events, sdk_module = ManualClock(), [], FakeSdkModule()
+        report = execute_probe(
+            sdk_module, port=7690, process_id=123, config=ProbeConfig(duration_seconds=2.0),
+            clock=clock, waiter=lambda _event, timeout: clock.advance(timeout),
+            process_guard=lambda _pid: True, progress=events.append,
+        )
+        heartbeat = next(event["aggregate"] for event in events if event["stage"] == "heartbeat")
+        self.assertEqual(heartbeat["counts"]["callbacks_received"], 0)
+        self.assertIsNone(heartbeat["lifecycle"]["first_callback_delay_seconds"])
+        self.assertIsNone(heartbeat["lifecycle"]["last_callback_age_seconds"])
+        probe = LiveRetargetSafetyProbe(ProbeConfig(), clock=clock)
+        probe.on_pose(None, VALID_ROOT, IDENTITY_POSE, -1, 10.0)
+        clock.advance(0.125)
+        self.assertEqual(probe.aggregate_result()["lifecycle"]["last_callback_age_seconds"], 0.125)
+        self.assertEqual(report["status"], "UNVERIFIED")
 
 
 if __name__ == "__main__":
